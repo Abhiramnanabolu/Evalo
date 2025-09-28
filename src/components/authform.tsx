@@ -3,59 +3,36 @@ import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 
-/**
- * Props for the AuthForm component.
- */
 interface AuthFormProps extends React.HTMLAttributes<HTMLDivElement> {
-  /**
-   * The source URL or base64 string for the company logo.
-   */
+  
   logoSrc: string;
-  /**
-   * Alt text for the company logo for accessibility.
-   */
+  
   logoAlt?: string;
-  /**
-   * The main title of the form.
-   */
+ 
   title: string;
-  /**
-   * A short description or subtitle displayed below the title.
-   */
+  
   description?: string;
-  /**
-   * The primary call-to-action button (e.g., social login).
-   */
+ 
   primaryAction: {
     label: string;
     icon?: React.ReactNode;
     onClick: () => void;
   };
-  /**
-   * An array of secondary action buttons.
-   */
+  
   secondaryActions?: {
     label: string;
     icon?: React.ReactNode;
     onClick: () => void;
   }[];
-  /**
-   * An optional action for skipping the login process.
-   */
+ 
   skipAction?: {
     label: string;
     onClick: () => void;
   };
-  /**
-   * Custom content to be displayed in the footer area.
-   */
+ 
   footerContent?: React.ReactNode;
 }
 
-/**
- * A reusable authentication form component built with shadcn/ui.
- * It supports various providers, a customizable header, and animations.
- */
 const AuthForm = React.forwardRef<HTMLDivElement, AuthFormProps>(
   (
     {
@@ -77,7 +54,7 @@ const AuthForm = React.forwardRef<HTMLDivElement, AuthFormProps>(
         <Card
           ref={ref}
           className={cn(
-            "w-full max-w-sm",
+            "w-full max-w-lg p-4",
             // Entrance Animation from tailwindcss-animate
             "animate-in fade-in-0 zoom-in-95 slide-in-from-bottom-4 duration-500"
           )}
@@ -88,10 +65,10 @@ const AuthForm = React.forwardRef<HTMLDivElement, AuthFormProps>(
             <div className="mb-4 flex justify-center ">
               <img src={logoSrc} alt={logoAlt} className="h-12 w-12 object-contain rounded-[4px]" />
             </div>
-            <CardTitle className="text-2xl font-semibold tracking-tight">{title}</CardTitle>
+            <CardTitle className="text-2xl mt-4 font-semibold tracking-tight">{title}</CardTitle>
             {description && <CardDescription>{description}</CardDescription>}
           </CardHeader>
-          <CardContent className="grid gap-4">
+          <CardContent className="grid mt-6 gap-4">
             {/* Primary Action Button */}
             <Button onClick={primaryAction.onClick} className="w-full transition-transform hover:scale-[1.03]">
               {primaryAction.icon}
