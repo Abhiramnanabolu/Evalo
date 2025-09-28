@@ -2,7 +2,7 @@
 
 import { HeroSection } from "../components/Hero"
 
-export default function Demo (){
+export default function App (){
     return (
         <HeroSection />
     )

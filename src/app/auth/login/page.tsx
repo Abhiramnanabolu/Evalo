@@ -1,5 +1,8 @@
 'use client'
 
+import { signIn, getSession } from "next-auth/react"
+import { useRouter } from "next/navigation"
+import { useState } from "react"
 import { AuthForm } from "../../../components/authform"
 
 const IconGoogle = (props: React.SVGProps<SVGSVGElement>) => (
@@ -8,6 +11,40 @@ const IconGoogle = (props: React.SVGProps<SVGSVGElement>) => (
 
 
 const LoginForm = () => {
+  const router = useRouter()
+  const [isLoading, setIsLoading] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+
+  const handleGoogleSignIn = async () => {
+    try {
+      setIsLoading(true)
+      setError(null)
+      
+      const result = await signIn('google', {
+        redirect: false,
+        callbackUrl: '/dashboard'
+      })
+
+      if (result?.error) {
+        setError('Failed to sign in with Google. Please try again.')
+      } else if (result?.ok) {
+        // Check if user is authenticated
+        const session = await getSession()
+        if (session) {
+          router.push('/')
+        }
+      }
+    } catch (error) {
+      setError('An unexpected error occurred. Please try again.')
+      console.error('Sign in error:', error)
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  const handleSkip = () => {
+    router.push('/')
+  }
 
   return (
     <div className="flex min-h-screen w-full items-center justify-center bg-background p-4">
@@ -17,15 +54,21 @@ const LoginForm = () => {
         title="Welcome Back"
         description="Sign in with your Google account to continue."
         primaryAction={{
-          label: "Continue with Google",
+          label: isLoading ? "Signing in..." : "Continue with Google",
           icon: <IconGoogle className="mr-2 h-4 w-4" />,
-          onClick: () => alert("Google login clicked"),
+          onClick: handleGoogleSignIn,
         }}
         skipAction={{
           label: "Skip for now",
-          onClick: () => alert("Skip clicked"),
+          onClick: handleSkip,
         }}
-        
+        footerContent={
+          error && (
+            <div className="text-red-500 text-sm">
+              {error}
+            </div>
+          )
+        }
       />
     </div>
   );

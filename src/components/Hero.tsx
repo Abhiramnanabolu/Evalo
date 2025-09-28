@@ -2,8 +2,10 @@
 
 import React from 'react'
 import Link from 'next/link'
-import { ArrowRight, ChevronRight, Menu, X } from 'lucide-react'
+import { ArrowRight, ChevronRight, Menu, X, LogOut, User } from 'lucide-react'
 import { Button } from '@/components/ui/button'
+import { useSession, signOut } from 'next-auth/react'
+import { GradientButton } from '@/components/ui/gradient-button'
 import { AnimatedGroup } from '@/components/ui/animated-group'
 import { ThemeToggle } from '@/components/theme-toggle'
 import { cn } from '@/lib/utils'
@@ -129,7 +131,7 @@ export function HeroSection() {
                                             size="lg"
                                             className="rounded-xl px-5 text-base">
                                             <Link href="#link">
-                                                <span className="text-nowrap">Start Building</span>
+                                                <span className="text-nowrap">Start Creating</span>
                                             </Link>
                                         </Button>
                                     </div>
@@ -288,6 +290,8 @@ const menuItems = [
 const HeroHeader = () => {
     const [menuState, setMenuState] = React.useState(false)
     const [isScrolled, setIsScrolled] = React.useState(false)
+    const [showUserDropdown, setShowUserDropdown] = React.useState(false)
+    const { data: session, status } = useSession()
 
     React.useEffect(() => {
         const handleScroll = () => {
@@ -296,6 +300,10 @@ const HeroHeader = () => {
         window.addEventListener('scroll', handleScroll)
         return () => window.removeEventListener('scroll', handleScroll)
     }, [])
+
+    const handleLogout = () => {
+        signOut({ callbackUrl: '/' })
+    }
     return (
         <header>
             <nav
@@ -354,33 +362,92 @@ const HeroHeader = () => {
                                 </div>
                             </div>
                             <div className="flex w-full flex-col space-y-3 sm:flex-row sm:gap-3 sm:space-y-0 md:w-fit">
-                                
                                 <ThemeToggle />
-                                <Button
-                                    asChild
-                                    variant="outline"
-                                    size="sm"
-                                    className={cn(isScrolled && 'lg:hidden')}>
-                                    <Link href="/auth/login">
-                                        <span>Login</span>
-                                    </Link>
-                                </Button>
-                                <Button
-                                    asChild
-                                    size="sm"
-                                    className={cn(isScrolled && 'lg:hidden')}>
-                                    <Link href="/auth/signup">
-                                        <span>Sign Up</span>
-                                    </Link>
-                                </Button>
-                                <Button
-                                    asChild
-                                    size="sm"
-                                    className={cn(isScrolled ? 'lg:inline-flex' : 'hidden')}>
-                                    <Link href="/auth/signup">
-                                        <span>Get Started</span>
-                                    </Link>
-                                </Button>
+                                
+                                {session ? (
+                                    // User is logged in - show dashboard button and avatar with dropdown
+                                    <div className="flex items-center gap-3">
+                                        <Button
+                                            asChild
+                                            size="sm"
+                                            className="bg-primary hover:bg-primary/90">
+                                            <Link href="/dashboard">
+                                                <span>Dashboard</span>
+                                            </Link>
+                                        </Button>
+                                        <div className="relative">
+                                            <img
+                                                src={session.user?.image || '/default-avatar.png'}
+                                                alt={session.user?.name || 'User'}
+                                                className="h-8 w-8 rounded-full border-2 border-border cursor-pointer hover:border-primary transition-colors"
+                                                onClick={() => setShowUserDropdown(!showUserDropdown)}
+                                                onMouseEnter={() => setShowUserDropdown(true)}
+                                            />
+                                            {showUserDropdown && (
+                                                <div 
+                                                    className="absolute right-0 top-10 w-64 bg-background border border-border rounded-lg shadow-lg z-50"
+                                                    onMouseLeave={() => setShowUserDropdown(false)}
+                                                >
+                                                    <div className="p-4 border-b border-border">
+                                                        <div className="flex items-center gap-3">
+                                                            <img
+                                                                src={session.user?.image || '/default-avatar.png'}
+                                                                alt={session.user?.name || 'User'}
+                                                                className="h-10 w-10 rounded-full border-2 border-border"
+                                                            />
+                                                            <div className="flex-1 min-w-0">
+                                                                <p className="text-sm font-medium text-foreground truncate">
+                                                                    {session.user?.name || 'User'}
+                                                                </p>
+                                                                <p className="text-xs text-muted-foreground truncate">
+                                                                    {session.user?.email || 'No email'}
+                                                                </p>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                    <div className="p-2">
+                                                        <button
+                                                            onClick={handleLogout}
+                                                            className="w-full cursor-pointer flex items-center gap-2 px-3 py-2 text-sm text-foreground hover:bg-muted rounded-md transition-colors"
+                                                        >
+                                                            <LogOut className="h-4 w-4" />
+                                                            Logout
+                                                        </button>
+                                                    </div>
+                                                </div>
+                                            )}
+                                        </div>
+                                    </div>
+                                ) : (
+                                    // User is not logged in - show login/signup buttons
+                                    <>
+                                        <Button
+                                            asChild
+                                            variant="outline"
+                                            size="sm"
+                                            className={cn(isScrolled && 'lg:hidden')}>
+                                            <Link href="/auth/login">
+                                                <span>Login</span>
+                                            </Link>
+                                        </Button>
+                                        <Button
+                                            asChild
+                                            size="sm"
+                                            className={cn(isScrolled && 'lg:hidden')}>
+                                            <Link href="/auth/signup">
+                                                <span>Sign Up</span>
+                                            </Link>
+                                        </Button>
+                                        <Button
+                                            asChild
+                                            size="sm"
+                                            className={cn(isScrolled ? 'lg:inline-flex' : 'hidden')}>
+                                            <Link href="/auth/signup">
+                                                <span>Get Started</span>
+                                            </Link>
+                                        </Button>
+                                    </>
+                                )}
                             </div>
                         </div>
                     </div>

@@ -1,36 +1,24 @@
 'use client'
 
 import React from 'react'
-import { Moon, Sun, Monitor } from 'lucide-react'
+import { Moon, Sun } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { useTheme } from '@/contexts/theme-context'
 import { cn } from '@/lib/utils'
 
 export function ThemeToggle({ className }: { className?: string }) {
-  const { theme, setTheme, resolvedTheme } = useTheme()
+  const { theme, setTheme } = useTheme()
 
   const cycleTheme = () => {
-    if (theme === 'light') {
-      setTheme('dark')
-    } else if (theme === 'dark') {
-      setTheme('system')
-    } else {
-      setTheme('light')
-    }
+    setTheme(theme === 'light' ? 'dark' : 'light')
   }
 
   const getIcon = () => {
-    if (theme === 'system') {
-      return <Monitor className="h-4 w-4" />
-    }
-    return resolvedTheme === 'dark' ? <Moon className="h-4 w-4" /> : <Sun className="h-4 w-4" />
+    return theme === 'dark' ? <Moon className="h-4 w-4" /> : <Sun className="h-4 w-4" />
   }
 
   const getLabel = () => {
-    if (theme === 'system') {
-      return 'System'
-    }
-    return resolvedTheme === 'dark' ? 'Dark' : 'Light'
+    return theme === 'dark' ? 'Dark' : 'Light'
   }
 
   return (
@@ -42,7 +30,7 @@ export function ThemeToggle({ className }: { className?: string }) {
         "relative h-9 w-9 rounded-md border border-input bg-background hover:bg-accent hover:text-accent-foreground",
         className
       )}
-      aria-label={`Switch to ${theme === 'light' ? 'dark' : theme === 'dark' ? 'system' : 'light'} theme`}
+      aria-label={`Switch to ${theme === 'light' ? 'dark' : 'light'} theme`}
     >
       {getIcon()}
       <span className="sr-only">Toggle theme (currently {getLabel()})</span>
@@ -51,30 +39,18 @@ export function ThemeToggle({ className }: { className?: string }) {
 }
 
 export function ThemeToggleWithLabel({ className }: { className?: string }) {
-  const { theme, setTheme, resolvedTheme } = useTheme()
+  const { theme, setTheme } = useTheme()
 
   const cycleTheme = () => {
-    if (theme === 'light') {
-      setTheme('dark')
-    } else if (theme === 'dark') {
-      setTheme('system')
-    } else {
-      setTheme('light')
-    }
+    setTheme(theme === 'light' ? 'dark' : 'light')
   }
 
   const getIcon = () => {
-    if (theme === 'system') {
-      return <Monitor className="h-4 w-4" />
-    }
-    return resolvedTheme === 'dark' ? <Moon className="h-4 w-4" /> : <Sun className="h-4 w-4" />
+    return theme === 'dark' ? <Moon className="h-4 w-4" /> : <Sun className="h-4 w-4" />
   }
 
   const getLabel = () => {
-    if (theme === 'system') {
-      return 'System'
-    }
-    return resolvedTheme === 'dark' ? 'Dark' : 'Light'
+    return theme === 'dark' ? 'Dark' : 'Light'
   }
 
   return (
@@ -86,7 +62,7 @@ export function ThemeToggleWithLabel({ className }: { className?: string }) {
         "flex items-center gap-2 h-9 px-3 rounded-md border border-input bg-background hover:bg-accent hover:text-accent-foreground",
         className
       )}
-      aria-label={`Switch to ${theme === 'light' ? 'dark' : theme === 'dark' ? 'system' : 'light'} theme`}
+      aria-label={`Switch to ${theme === 'light' ? 'dark' : 'light'} theme`}
     >
       {getIcon()}
       <span className="text-sm">{getLabel()}</span>
