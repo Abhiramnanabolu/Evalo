@@ -21,4 +21,43 @@ model User {
   image             String?  
   createdAt         DateTime    @default(now())
   updatedAt         DateTime    @updatedAt
+  tests             Test[]      @relation("CreatorTests")
+}
+
+model Test {
+  id                  String            @id @default(uuid())
+  title               String
+  description         String?
+  duration            Int
+  status              TestStatus        @default(DRAFT)
+  startTime           DateTime?
+  endTime             DateTime?
+  allowBack           Boolean           @default(true)
+  questionOrder       QuestionOrder     @default(SEQUENTIAL)
+  attemptLimit        Int? 
+  retakeCooldown      Int?  
+  resultVisibility    ResultVisibility  @default(AFTER_TEST)
+  passPercentage      Float?
+  creator             User              @relation("CreatorTests", fields: [creatorId], references: [id])
+  creatorId           String
+  createdAt           DateTime          @default(now())
+  updatedAt           DateTime          @updatedAt
+}
+
+enum TestStatus {
+  DRAFT
+  PUBLISHED
+  CLOSED
+  ARCHIVED
+}
+
+enum QuestionOrder {
+  SEQUENTIAL
+  SHUFFLED
+}
+
+enum ResultVisibility {
+  INSTANT
+  AFTER_TEST
+  HIDDEN
 }

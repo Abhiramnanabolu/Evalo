@@ -1,8 +1,8 @@
 'use client'
 
-import { signIn, getSession } from "next-auth/react"
+import { signIn, getSession, useSession } from "next-auth/react"
 import { useRouter } from "next/navigation"
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { AuthForm } from "../../../components/authform"
 
 const IconGoogle = (props: React.SVGProps<SVGSVGElement>) => (
@@ -12,8 +12,16 @@ const IconGoogle = (props: React.SVGProps<SVGSVGElement>) => (
 
 const LoginForm = () => {
   const router = useRouter()
+  const { data: session, status } = useSession()
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+
+  // Redirect to dashboard if already logged in
+  useEffect(() => {
+    if (status === 'authenticated' && session) {
+      router.push('/dashboard')
+    }
+  }, [session, status, router])
 
   const handleGoogleSignIn = async () => {
     try {
@@ -31,7 +39,7 @@ const LoginForm = () => {
         // Check if user is authenticated
         const session = await getSession()
         if (session) {
-          router.push('/')
+          router.push('/dashboard')
         }
       }
     } catch (error) {
