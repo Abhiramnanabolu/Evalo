@@ -95,8 +95,9 @@ export default function CreateTest() {
           throw new Error(data.error || "Failed to create test")
         }
 
+        const testId = data.test.id
         setSubmitSuccess(true)
-        
+
         // Reset form after successful submission
         setFormData({
           title: "",
@@ -111,9 +112,9 @@ export default function CreateTest() {
         })
         setFormErrors({})
 
-        // Redirect to dashboard after a short delay
+        // Redirect to test edit page after a short delay
         setTimeout(() => {
-          router.push("/dashboard")
+          router.push(`/dashboard/test/${testId}/edit`)
         }, 2000)
 
       } catch (error) {
