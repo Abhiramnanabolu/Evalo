@@ -9,6 +9,13 @@ export default function Page() {
         onChange={(html) => {
           console.log("Editor HTML:", html);
         }}
+        type="question"
+      />
+      <RichTextEditor
+        onChange={(html) => {
+          console.log("Editor HTML:", html);
+        }}
+        type="option"
       />
     </div>
   );

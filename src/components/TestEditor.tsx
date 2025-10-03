@@ -22,12 +22,12 @@ import { TestStatus, QuestionOrder, ResultVisibility, QuestionType } from "@/typ
 // Import shadcn/ui and utils for improved UI
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { Textarea } from "@/components/ui/textarea"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { cn } from "@/lib/utils"
+import QuestionEditor from "./QuestionEditor"
 
 // Component starts here
 export default function TestEditor({ id }: { id: string }) {
@@ -320,20 +320,20 @@ export default function TestEditor({ id }: { id: string }) {
       case QuestionType.MCQ_SINGLE:
       case QuestionType.MCQ_MULTIPLE:
         return (
-          <div className="space-y-3">
-            <div className="flex items-center justify-between mb-2">
+          <div className="space-y-2">
+            <div className="flex items-center justify-between mb-1">
               <Label className="text-sm font-medium text-foreground">Options</Label>
-              <Button
-                onClick={() => addOption(question.id, sectionId)}
-                className="text-sm text-primary hover:text-primary-foreground flex items-center gap-1"
-              >
-                <Plus className="w-4 h-4" />
+              <Button onClick={() => addOption(question.id, sectionId)} size="sm" variant="secondary" className="h-8">
+                <Plus className="w-3.5 h-3.5 mr-1" />
                 Add Option
               </Button>
             </div>
             {question.options?.map((option, index) => (
-              <div key={option.id} className="flex items-start gap-2 p-3 bg-muted rounded-lg">
-                <div className="flex items-center gap-2 mt-2">
+              <div
+                key={option.id}
+                className="flex items-start gap-2 p-2 bg-muted/50 rounded-md border border-border/50"
+              >
+                <div className="flex items-center gap-2 mt-1.5">
                   <input
                     type={question.type === QuestionType.MCQ_SINGLE ? "radio" : "checkbox"}
                     checked={option.isCorrect}
@@ -342,22 +342,24 @@ export default function TestEditor({ id }: { id: string }) {
                   />
                 </div>
                 <div className="flex-1 space-y-2">
-                  <Input
-                    value={option.text}
-                    onChange={(e) => updateOption(question.id, option.id, "text", e.target.value, sectionId)}
+                  <QuestionEditor
+                    initialContent={option.text}
+                    onChange={(html) => updateOption(question.id, option.id, "text", html, sectionId)}
                     placeholder={`Option ${index + 1}`}
+                    type="option"
                   />
                   <Input
                     value={option.imageUrl || ""}
                     onChange={(e) => updateOption(question.id, option.id, "imageUrl", e.target.value, sectionId)}
                     placeholder="Image URL (optional)"
+                    className="h-9"
                   />
                 </div>
                 <Button
                   variant="ghost"
                   size="icon"
                   onClick={() => deleteOption(question.id, option.id, sectionId)}
-                  className="mt-2 text-destructive"
+                  className="mt-1 text-destructive h-8 w-8"
                   aria-label="Delete option"
                 >
                   <Trash2 className="w-4 h-4" />
@@ -376,10 +378,10 @@ export default function TestEditor({ id }: { id: string }) {
           }, 100)
         }
         return (
-          <div className="space-y-3">
+          <div className="space-y-2">
             <Label className="text-sm font-medium text-foreground">Answer</Label>
-            <div className="space-y-2">
-              <Label className="flex items-center gap-2">
+            <div className="space-y-1.5">
+              <Label className="flex items-center gap-2 text-sm">
                 <input
                   type="radio"
                   name={`tf-${question.id}`}
@@ -388,7 +390,7 @@ export default function TestEditor({ id }: { id: string }) {
                 />
                 True
               </Label>
-              <Label className="flex items-center gap-2">
+              <Label className="flex items-center gap-2 text-sm">
                 <input
                   type="radio"
                   name={`tf-${question.id}`}
@@ -411,7 +413,7 @@ export default function TestEditor({ id }: { id: string }) {
               value={question.correctAnswer}
               onChange={(e) => updateQuestion(question.id, "correctAnswer", e.target.value, sectionId)}
               placeholder={question.type === QuestionType.NUMERIC ? "Enter numeric answer" : "Enter correct answer"}
-              className="w-full px-3 py-2 border rounded-md focus:ring-2 focus:ring-primary"
+              className="w-full"
             />
           </div>
         )
@@ -425,13 +427,10 @@ export default function TestEditor({ id }: { id: string }) {
     const isExpanded = expandedQuestions.has(question.id)
 
     return (
-      <Card
-        key={question.id}
-        className="rounded-xl border border-border/60 shadow-sm hover:shadow-md transition group bg-card"
-      >
-        <CardContent className="p-4 md:p-5">
-          <div className="flex items-start justify-between gap-3">
-            <div className="flex items-start gap-3 flex-1 min-w-0">
+      <Card key={question.id} className="rounded-lg border border-border/50 shadow-sm hover:shadow transition bg-card">
+        <CardContent className="p-3 md:p-4">
+          <div className="flex items-start justify-between gap-2">
+            <div className="flex items-start gap-2 flex-1 min-w-0">
               <Button
                 variant="ghost"
                 size="icon"
@@ -441,28 +440,30 @@ export default function TestEditor({ id }: { id: string }) {
                   } else {
                     expandedQuestions.add(question.id)
                   }
-                  setExpandedQuestions(new Set(expandedQuestions))
+                  setExpandedSections(new Set(expandedQuestions))
                 }}
                 aria-label="Toggle question details"
-                className="mt-1 shrink-0"
+                className="mt-0.5 shrink-0 h-7 w-7"
               >
-                {isExpanded ? <ChevronUp className="w-5 h-5" /> : <ChevronDown className="w-5 h-5" />}
+                {isExpanded ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
               </Button>
 
               <div className="flex-1 min-w-0">
-                <Input
-                  type="text"
-                  value={question.title}
-                  onChange={(e) => updateQuestion(question.id, "title", e.target.value, sectionId)}
-                  className="h-10 text-base md:text-lg font-medium"
+                <QuestionEditor
+                  initialContent={question.title}
+                  onChange={(html) => updateQuestion(question.id, "title", html, sectionId)}
                   placeholder="Enter question title"
+                  type="question"
                 />
-                <div className="flex flex-wrap items-center gap-3 mt-2 text-xs text-muted-foreground">
-                  <span>Type: {question.type.replace(/_/g, " ")}</span>
-                  <span>Points: {question.points}</span>
+                <div className="flex flex-wrap items-center gap-2 mt-1 text-[11px] text-muted-foreground">
+                  <Badge variant="outline" className="h-5 px-1.5">
+                    {question.type.replace(/_/g, " ")}
+                  </Badge>
+                  <span className="leading-none">•</span>
+                  <span className="leading-none">Pts: {question.points}</span>
                   {question.negativePoints > 0 && (
-                    <Badge variant="secondary" className="text-destructive">
-                      -{question.negativePoints} penalty
+                    <Badge variant="secondary" className="h-5 px-1.5 text-destructive">
+                      -{question.negativePoints}
                     </Badge>
                   )}
                 </div>
@@ -474,17 +475,17 @@ export default function TestEditor({ id }: { id: string }) {
               size="icon"
               onClick={() => deleteQuestion(question.id, sectionId)}
               aria-label="Delete question"
-              className="text-destructive hover:text-destructive-foreground"
+              className="h-7 w-7 text-destructive hover:text-destructive-foreground"
             >
-              <Trash2 className="w-5 h-5" />
+              <Trash2 className="w-4 h-4" />
             </Button>
           </div>
 
           {isExpanded && (
-            <div className="mt-5 pt-5 border-t space-y-5">
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="mt-4 pt-3 border-t space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
                 <div>
-                  <Label className="block text-sm font-medium mb-2">Question Type</Label>
+                  <Label className="block text-sm font-medium mb-1">Question Type</Label>
                   <Select
                     value={question.type}
                     onValueChange={(value) => updateQuestion(question.id, "type", value as QuestionType, sectionId)}
@@ -503,7 +504,7 @@ export default function TestEditor({ id }: { id: string }) {
                 </div>
 
                 <div>
-                  <Label className="block text-sm font-medium mb-2">Points</Label>
+                  <Label className="block text-sm font-medium mb-1">Points</Label>
                   <Input
                     type="number"
                     value={question.points}
@@ -516,7 +517,7 @@ export default function TestEditor({ id }: { id: string }) {
                 </div>
 
                 <div>
-                  <Label className="block text-sm font-medium mb-2">Negative Points</Label>
+                  <Label className="block text-sm font-medium mb-1">Negative Points</Label>
                   <Input
                     type="number"
                     value={question.negativePoints}
@@ -529,35 +530,15 @@ export default function TestEditor({ id }: { id: string }) {
                 </div>
               </div>
 
-              <div>
-                <Label className="block text-sm font-medium mb-2">Description (Optional)</Label>
-                <Textarea
-                  value={question.description}
-                  onChange={(e) => updateQuestion(question.id, "description", e.target.value, sectionId)}
-                  placeholder="Add question description or instructions"
-                  rows={3}
-                />
-              </div>
-
-              <div>
-                <Label className="block text-sm font-medium mb-2">Image URL (Optional)</Label>
-                <Input
-                  type="text"
-                  value={question.imageUrl || ""}
-                  onChange={(e) => updateQuestion(question.id, "imageUrl", e.target.value, sectionId)}
-                  placeholder="https://example.com/image.jpg"
-                />
-              </div>
-
               {renderQuestionOptions(question, sectionId)}
 
               <div>
-                <Label className="block text-sm font-medium mb-2">Explanation (Optional)</Label>
-                <Textarea
-                  value={question.explanation}
-                  onChange={(e) => updateQuestion(question.id, "explanation", e.target.value, sectionId)}
+                <Label className="block text-xs font-medium mb-2">Explanation (Optional)</Label>
+                <QuestionEditor
+                  initialContent={question.explanation}
+                  onChange={(html) => updateQuestion(question.id, "explanation", html, sectionId)}
                   placeholder="Explain the correct answer"
-                  rows={2}
+                  type="question"
                 />
               </div>
             </div>
@@ -571,13 +552,10 @@ export default function TestEditor({ id }: { id: string }) {
     const isExpanded = expandedSections.has(section.id)
 
     return (
-      <Card
-        key={section.id}
-        className="rounded-xl border border-border/60 shadow-sm hover:shadow-md transition bg-card"
-      >
-        <CardContent className="p-4 md:p-5">
-          <div className="flex items-start justify-between gap-3">
-            <div className="flex items-start gap-3 flex-1 min-w-0">
+      <Card key={section.id} className="rounded-lg border border-border/50 shadow-sm hover:shadow transition bg-card">
+        <CardContent className="p-3 md:p-4">
+          <div className="flex items-start justify-between gap-2">
+            <div className="flex items-start gap-2 flex-1 min-w-0">
               <Button
                 variant="ghost"
                 size="icon"
@@ -590,9 +568,9 @@ export default function TestEditor({ id }: { id: string }) {
                   setExpandedSections(new Set(expandedSections))
                 }}
                 aria-label="Toggle section details"
-                className="mt-1 shrink-0"
+                className="mt-0.5 shrink-0 h-7 w-7"
               >
-                {isExpanded ? <ChevronUp className="w-5 h-5" /> : <ChevronDown className="w-5 h-5" />}
+                {isExpanded ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
               </Button>
 
               <div className="flex-1 min-w-0">
@@ -601,13 +579,15 @@ export default function TestEditor({ id }: { id: string }) {
                   value={section.title}
                   onChange={(e) => updateSection(section.id, "title", e.target.value)}
                   placeholder="Section Title"
-                  className="h-10 text-lg font-semibold"
+                  className="h-9 text-base font-semibold"
                 />
-                <div className="flex items-center gap-4 mt-2 text-xs text-muted-foreground">
-                  <span>{section.questions?.length || 0} questions</span>
+                <div className="flex items-center gap-2 mt-1 text-[11px] text-muted-foreground">
+                  <Badge variant="outline" className="h-5 px-1.5">
+                    {section.questions?.length || 0} questions
+                  </Badge>
                   {section.duration > 0 && (
-                    <span className="flex items-center gap-1">
-                      <Clock className="w-4 h-4" />
+                    <span className="flex items-center gap-1 leading-none">
+                      <Clock className="w-3.5 h-3.5" />
                       {section.duration} min
                     </span>
                   )}
@@ -620,26 +600,17 @@ export default function TestEditor({ id }: { id: string }) {
               size="icon"
               onClick={() => deleteSection(section.id)}
               aria-label="Delete section"
-              className="text-destructive hover:text-destructive-foreground"
+              className="h-7 w-7 text-destructive hover:text-destructive-foreground"
             >
-              <Trash2 className="w-5 h-5" />
+              <Trash2 className="w-4 h-4" />
             </Button>
           </div>
 
           {isExpanded && (
-            <div className="mt-5 pt-5 border-t space-y-5">
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div className="md:col-span-2">
-                  <Label className="mb-2 block">Description</Label>
-                  <Textarea
-                    value={section.description}
-                    onChange={(e) => updateSection(section.id, "description", e.target.value)}
-                    placeholder="Section description"
-                    rows={2}
-                  />
-                </div>
+            <div className="mt-4 pt-3 border-t space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
                 <div>
-                  <Label className="mb-2 block">Duration (minutes)</Label>
+                  <Label className="mb-1 block">Duration (minutes)</Label>
                   <Input
                     type="number"
                     value={section.duration}
@@ -649,15 +620,15 @@ export default function TestEditor({ id }: { id: string }) {
                 </div>
               </div>
 
-              <div className="flex items-center justify-between mb-1">
-                <h4 className="font-medium text-foreground">Questions</h4>
-                <Button size="sm" onClick={() => addQuestion(section.id)}>
-                  <Plus className="w-4 h-4 mr-2" />
+              <div className="flex items-center justify-between">
+                <h4 className="text-sm font-medium text-foreground">Questions</h4>
+                <Button size="sm" className="h-8" onClick={() => addQuestion(section.id)}>
+                  <Plus className="w-3.5 h-3.5 mr-1" />
                   Add Question
                 </Button>
               </div>
 
-              <div className="space-y-3">
+              <div className="space-y-2">
                 {section.questions?.map((question) => renderQuestion(question, section.id))}
               </div>
             </div>
@@ -750,23 +721,33 @@ export default function TestEditor({ id }: { id: string }) {
                             {s.questions.map((q) => {
                               const isActive = selectedQuestionId === q.id
                               return (
-                                <button
-                                  key={q.id}
-                                  className={cn(
-                                    "w-full text-left rounded-md px-2 py-1.5 text-xs hover:bg-muted/70",
-                                    isActive && "bg-muted",
-                                  )}
-                                  onClick={() => {
-                                    setSelectedSectionId(s.id)
-                                    setSelectedQuestionId(q.id)
-                                    if (!expandedQuestions.has(q.id)) {
-                                      expandedQuestions.add(q.id)
-                                      setExpandedQuestions(new Set(expandedQuestions))
-                                    }
-                                  }}
-                                >
-                                  <span className="truncate block">{q.title || "Untitled question"}</span>
-                                </button>
+                                <div key={q.id} className="flex items-center gap-2">
+                                  <button
+                                    className={cn(
+                                      "flex-1 min-w-0 text-left rounded-md px-2 py-1.5 text-xs hover:bg-muted/70",
+                                      isActive && "bg-muted",
+                                    )}
+                                    onClick={() => {
+                                      setSelectedSectionId(s.id)
+                                      setSelectedQuestionId(q.id)
+                                      if (!expandedQuestions.has(q.id)) {
+                                        expandedQuestions.add(q.id)
+                                        setExpandedQuestions(new Set(expandedQuestions))
+                                      }
+                                    }}
+                                  >
+                                    <span className="truncate block">{q.title || "Untitled question"}</span>
+                                  </button>
+                                  <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    className="text-destructive hover:text-destructive-foreground shrink-0"
+                                    onClick={() => deleteQuestion(q.id, s.id)}
+                                    aria-label="Delete question"
+                                  >
+                                    <Trash2 className="w-4 h-4" />
+                                  </Button>
+                                </div>
                               )
                             })}
                           </div>
@@ -801,7 +782,7 @@ export default function TestEditor({ id }: { id: string }) {
                       <div key={q.id} className="flex items-center gap-2 px-3">
                         <button
                           className={cn(
-                            "w-full text-left rounded-md px-2 py-1.5 text-xs hover:bg-muted/70",
+                            "flex-1 min-w-0 text-left rounded-md px-2 py-1.5 text-xs hover:bg-muted/70",
                             isActive && "bg-muted",
                           )}
                           onClick={() => {
@@ -818,7 +799,7 @@ export default function TestEditor({ id }: { id: string }) {
                         <Button
                           variant="ghost"
                           size="icon"
-                          className="text-destructive hover:text-destructive-foreground"
+                          className="text-destructive hover:text-destructive-foreground shrink-0"
                           onClick={() => deleteQuestion(q.id)}
                           aria-label="Delete question"
                         >
@@ -946,12 +927,11 @@ export default function TestEditor({ id }: { id: string }) {
 
                     <div className="space-y-2">
                       <Label htmlFor="test-description">Description</Label>
-                      <Textarea
-                        id="test-description"
-                        value={test.description}
-                        onChange={(e) => updateTestField("description", e.target.value)}
-                        rows={4}
+                      <QuestionEditor
+                        initialContent={test.description}
+                        onChange={(html) => updateTestField("description", html)}
                         placeholder="Enter test description"
+                        type="question"
                       />
                     </div>
 
