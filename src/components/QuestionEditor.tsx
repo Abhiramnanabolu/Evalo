@@ -25,6 +25,14 @@ import {
   Redo,
 } from "lucide-react"
 
+declare global {
+  namespace JSX {
+    interface IntrinsicElements {
+      "math-field": any
+    }
+  }
+}
+
 
 type Props = {
   onChange?: (html: string) => void
@@ -329,15 +337,12 @@ export default function RichTextEditor({
             onClick={(e) => e.stopPropagation()}
           >
             <h2 className="text-base font-semibold mb-3">Insert Math Equation</h2>
-            {
-              (
-                <math-field
-                  className="w-full rounded-md border border-border bg-background text-foreground p-2 text-lg"
-                  onInput={(e: any) => setMathValue(e.target.value)}
-                  value={mathValue}
-                ></math-field>
-              ) as any
-            }
+            {/* @ts-ignore */}
+            <math-field
+              className="w-full rounded-md border border-border bg-background text-foreground p-2 text-lg"
+              onInput={(e: any) => setMathValue(e.target.value)}
+              value={mathValue}
+            />
             <div className="mt-4 flex justify-end gap-2">
               <Button variant="outline" size="sm" onClick={() => setShowMath(false)}>
                 Cancel
