@@ -1,5 +1,8 @@
 @import "tailwindcss";
 
+@import "katex/dist/katex.min.css";
+@import "react-quill-new/dist/quill.snow.css";
+
 @plugin "tailwindcss-animate";
 @import "tw-animate-css";
 

@@ -1,18 +1,20 @@
 "use client"
 
 import { useParams } from "next/navigation"
-import TestEditor from "@/components/TestEditor"
 import Header from "@/components/Header"
+import TestEditor from "@/components/TestEditor"
 
-// Component starts here
 export default function EditTestPage() {
   const params = useParams()
   const testId = params.id as string
 
   return (
-    <>
+    <div className="min-h-screen flex flex-col">
       <Header page="testeditor" />
-      <TestEditor id={testId}  />
-    </>
+      <main className="flex-1 min-h-0">
+        {/* The TestEditor internally locks its height with calc(100vh-56px) */}
+        <TestEditor id={testId} />
+      </main>
+    </div>
   )
 }
