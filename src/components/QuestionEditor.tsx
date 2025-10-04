@@ -23,6 +23,7 @@ import {
   Link as LinkIcon,
   Undo,
   Redo,
+  ChevronLeft,
 } from "lucide-react"
 
 declare global {
@@ -53,6 +54,7 @@ export default function RichTextEditor({
   const [showLink, setShowLink] = useState(false)
   const [linkUrl, setLinkUrl] = useState("")
   const [activeStates, setActiveStates] = useState<Record<string, boolean>>({})
+  const [showToolbar, setShowToolbar] = useState(type !== 'option')
 
   const editor = useEditor({
     extensions: [
@@ -213,11 +215,12 @@ export default function RichTextEditor({
   return (
     <div className="w-full">
       {/* Toolbar */}
-      <Card
-        role="toolbar"
-        aria-label="Formatting toolbar"
-        className="flex flex-wrap items-center gap-1 p-2 bg-card text-card-foreground border border-border rounded-b-none border-b-0"
-      >
+      {showToolbar && (
+        <Card
+          role="toolbar"
+          aria-label="Formatting toolbar"
+          className="flex flex-wrap items-center gap-1 p-2 bg-card text-card-foreground border border-border rounded-b-none border-b-0"
+        >
         {/* Undo/Redo */}
         <div className="flex items-center gap-1">
           <Button
@@ -316,16 +319,33 @@ export default function RichTextEditor({
           className="hidden"
           onChange={handleImageUpload}
         />
-      </Card>
+        </Card>
+      )}
 
       {/* Editor */}
       <Card
         className={cn(
-          "bg-card text-card-foreground border border-border rounded-t-none",
+          "bg-card text-card-foreground border border-border",
+          showToolbar ? "rounded-t-none" : "rounded-md",
           "focus-within:ring-2 focus-within:ring-ring focus-within:ring-offset-0",
+          "relative"
         )}
       >
         <EditorContent editor={editor} />
+        
+        {/* Toggle Toolbar Button */}
+        {type === 'option' && (
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon"
+            onClick={() => setShowToolbar(!showToolbar)}
+            className="absolute top-2 right-2 size-6 rounded-full bg-gray-100 hover:bg-gray-200 text-gray-600 hover:text-gray-800"
+            title={showToolbar ? "Hide toolbar" : "Show toolbar"}
+          >
+            <ChevronLeft className={cn("size-3 transition-transform", showToolbar ? "rotate-180" : "")} />
+          </Button>
+        )}
       </Card>
 
       {/* Math Modal */}

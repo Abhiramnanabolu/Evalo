@@ -119,6 +119,8 @@ export default function TestEditor({ id }: { id: string }) {
       title: "New Section",
       description: "",
       duration: 0,
+      positivePoints: 1,
+      negativePoints: 0,
       order: test.sections?.length || 0,
       questions: [],
       createdAt: new Date(),
@@ -155,6 +157,19 @@ export default function TestEditor({ id }: { id: string }) {
 
   const addQuestion = (sectionId?: string) => {
     if (!test) return
+    
+    // Get section defaults if adding to a section
+    let defaultPoints = 1
+    let defaultNegativePoints = 0
+    
+    if (sectionId) {
+      const section = test.sections?.find(s => s.id === sectionId)
+      if (section) {
+        defaultPoints = section.positivePoints || 1
+        defaultNegativePoints = section.negativePoints || 0
+      }
+    }
+    
     const newQuestion: Question = {
       id: `question-${Date.now()}`,
       testId: test.id,
@@ -163,8 +178,8 @@ export default function TestEditor({ id }: { id: string }) {
       title: "",
       description: "",
       imageUrl: "",
-      points: 1,
-      negativePoints: 0,
+      points: defaultPoints,
+      negativePoints: defaultNegativePoints,
       order: test.questions?.length || 0,
       options: [],
       correctAnswer: "",
@@ -347,12 +362,6 @@ export default function TestEditor({ id }: { id: string }) {
                     onChange={(html) => updateOption(question.id, option.id, "text", html, sectionId)}
                     placeholder={`Option ${index + 1}`}
                     type="option"
-                  />
-                  <Input
-                    value={option.imageUrl || ""}
-                    onChange={(e) => updateOption(question.id, option.id, "imageUrl", e.target.value, sectionId)}
-                    placeholder="Image URL (optional)"
-                    className="h-9"
                   />
                 </div>
                 <Button
@@ -574,7 +583,7 @@ export default function TestEditor({ id }: { id: string }) {
                 {isExpanded ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
               </Button>
               
-              <div className="flex-1 grid grid-cols-1 md:grid-cols-3 gap-3">
+              <div className="flex-1 grid grid-cols-1 md:grid-cols-5 gap-3">
                 <div className="space-y-1 md:col-span-2">
                   <Label htmlFor={`section-title-${section.id}`} className="text-xs font-medium text-muted-foreground">
                     Section Title
@@ -600,6 +609,38 @@ export default function TestEditor({ id }: { id: string }) {
                     onChange={(e) => updateSection(section.id, "duration", Number.parseInt(e.target.value) || 0)}
                     placeholder="0"
                     min="0"
+                    className="h-10"
+                  />
+                </div>
+
+                <div className="space-y-1">
+                  <Label htmlFor={`section-positive-points-${section.id}`} className="text-xs font-medium text-muted-foreground">
+                    Positive Points
+                  </Label>
+                  <Input
+                    id={`section-positive-points-${section.id}`}
+                    type="number"
+                    value={section.positivePoints}
+                    onChange={(e) => updateSection(section.id, "positivePoints", Number.parseFloat(e.target.value) || 0)}
+                    placeholder="1"
+                    min="0"
+                    step="0.5"
+                    className="h-10"
+                  />
+                </div>
+
+                <div className="space-y-1">
+                  <Label htmlFor={`section-negative-points-${section.id}`} className="text-xs font-medium text-muted-foreground">
+                    Negative Points
+                  </Label>
+                  <Input
+                    id={`section-negative-points-${section.id}`}
+                    type="number"
+                    value={section.negativePoints}
+                    onChange={(e) => updateSection(section.id, "negativePoints", Number.parseFloat(e.target.value) || 0)}
+                    placeholder="0"
+                    min="0"
+                    step="0.5"
                     className="h-10"
                   />
                 </div>

@@ -62,6 +62,8 @@ export interface Section {
     title: string;
     description: string;
     duration: number;
+    positivePoints: number;
+    negativePoints: number;
     order: number;
     questions: Question[];
     createdAt: Date;

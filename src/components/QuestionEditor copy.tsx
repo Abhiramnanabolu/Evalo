@@ -38,12 +38,14 @@ type Props = {
   onChange?: (html: string) => void
   placeholder?: string
   initialContent?: string
+  type?: 'question' | 'option'
 }
 
 export default function RichTextEditor({ 
   onChange, 
   placeholder = "Start typing...", 
-  initialContent = "" 
+  initialContent = "",
+  type = "question"
 }: Props) {
   const fileInputRef = useRef<HTMLInputElement | null>(null)
   const [showMath, setShowMath] = useState(false)
@@ -78,7 +80,7 @@ export default function RichTextEditor({
     },
     editorProps: {
       attributes: {
-        class: 'prose prose-sm dark:prose-invert max-w-none focus:outline-none min-h-[150px] px-3 py-2',
+        class: `prose prose-sm dark:prose-invert max-w-none focus:outline-none ${type === 'option' ? 'min-h-[60px]' : 'min-h-[120px]'} px-3 py-2`,
         placeholder: placeholder,
       },
       handlePaste: (view, event) => {
