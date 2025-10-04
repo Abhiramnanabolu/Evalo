@@ -5,6 +5,7 @@ import { useSession } from "next-auth/react"
 import Link from "next/link"
 import { cn } from "@/lib/utils"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
+import { ThemeToggle } from "@/components/theme-toggle"
 
 type HeaderProps = {
   page?: string
@@ -44,6 +45,7 @@ export default function Header({ page, className, rightSlot, logoSrc = "/Logo1.p
 
           <div className="flex items-center gap-3">
             {rightSlot}
+            <ThemeToggle />
             <div className="flex flex-col items-end">
               <span className="text-sm font-medium text-foreground">{session?.user?.name || "User"}</span>
             </div>
