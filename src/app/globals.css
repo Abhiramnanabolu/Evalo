@@ -131,3 +131,11 @@
     font-family: var(--font-poppins), ui-sans-serif, system-ui, sans-serif;
   }
 }
+
+/* MathLive z-index fixes for dialog compatibility */
+.ML__keyboard,
+.ML__popover,
+.ML__menu,
+.ML__tooltip {
+  z-index: 150 !important;
+}

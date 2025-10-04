@@ -351,11 +351,11 @@ export default function RichTextEditor({
       {/* Math Modal */}
       {showMath && (
         <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/50"
+          className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50"
           onClick={() => setShowMath(false)}
         >
           <Card
-            className="w-[400px] p-4 bg-popover text-popover-foreground border border-border shadow-lg"
+            className="w-[400px] p-4 bg-popover text-popover-foreground border border-border shadow-lg z-[101]"
             onClick={(e) => e.stopPropagation()}
           >
             <h2 className="text-base font-semibold mb-3">Insert Math Equation</h2>

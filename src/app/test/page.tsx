@@ -1,22 +1,26 @@
 'use client'
 
 import RichTextEditor from "@/components/QuestionEditor"
+import QuestionRenderer from "@/components/QuestionRenderer"
+import { useState } from "react"
 
 export default function Page() {
+  const [questionHtml, setQuestionHtml] = useState("")
+
   return (
-    <div className="p-6">
-      <RichTextEditor
-        onChange={(html) => {
-          console.log("Editor HTML:", html);
-        }}
+    <div>
+      {/* Editor */}
+      <RichTextEditor 
+        onChange={setQuestionHtml}
+        placeholder="Enter your question"
         type="question"
       />
-      <RichTextEditor
-        onChange={(html) => {
-          console.log("Editor HTML:", html);
-        }}
-        type="option"
+
+      {/* Renderer */}
+      <QuestionRenderer 
+        content={questionHtml}
+        type="question"
       />
     </div>
-  );
+  )
 }

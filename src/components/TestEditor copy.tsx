@@ -13,7 +13,6 @@ import {
   Shuffle,
   ListOrdered,
   ArrowLeft,
-  Pencil,
 } from "lucide-react"
 
 // Import your types (assuming they're in a separate file)
@@ -29,15 +28,6 @@ import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { cn } from "@/lib/utils"
 import QuestionEditor from "./QuestionEditor"
-import QuestionRenderer from "./QuestionRenderer"
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog"
 
 // Component starts here
 export default function TestEditor({ id }: { id: string }) {
@@ -53,12 +43,6 @@ export default function TestEditor({ id }: { id: string }) {
   const [activeTab, setActiveTab] = useState<"details" | "sections">("details")
   const [selectedSectionId, setSelectedSectionId] = useState<string | null>(null)
   const [selectedQuestionId, setSelectedQuestionId] = useState<string | null>(null)
-  const [isAddQuestionDialogOpen, setIsAddQuestionDialogOpen] = useState(false)
-  const [newQuestion, setNewQuestion] = useState<Question | null>(null)
-  const [currentSectionId, setCurrentSectionId] = useState<string | undefined>(undefined)
-  const [isEditMode, setIsEditMode] = useState(false)
-  const [editingQuestionId, setEditingQuestionId] = useState<string | null>(null)
-  const [validationError, setValidationError] = useState<string>("")
 
   // Fetch test data
   useEffect(() => {
@@ -171,7 +155,7 @@ export default function TestEditor({ id }: { id: string }) {
     setSelectedQuestionId(null)
   }
 
-  const openAddQuestionDialog = (sectionId?: string) => {
+  const addQuestion = (sectionId?: string) => {
     if (!test) return
     
     // Get section defaults if adding to a section
@@ -186,7 +170,7 @@ export default function TestEditor({ id }: { id: string }) {
       }
     }
     
-    const question: Question = {
+    const newQuestion: Question = {
       id: `question-${Date.now()}`,
       testId: test.id,
       test: test,
@@ -204,192 +188,21 @@ export default function TestEditor({ id }: { id: string }) {
       updatedAt: new Date(),
     }
 
-    setNewQuestion(question)
-    setCurrentSectionId(sectionId)
-    setIsEditMode(false)
-    setEditingQuestionId(null)
-    setValidationError("")
-    setIsAddQuestionDialogOpen(true)
-  }
-
-  const openEditQuestionDialog = (question: Question, sectionId?: string) => {
-    setNewQuestion({ ...question })
-    setCurrentSectionId(sectionId)
-    setIsEditMode(true)
-    setEditingQuestionId(question.id)
-    setValidationError("")
-    setIsAddQuestionDialogOpen(true)
-  }
-
-  const validateQuestion = (question: Question): string | null => {
-    // Validate based on question type
-    switch (question.type) {
-      case QuestionType.MCQ_SINGLE:
-        if (!question.options || question.options.length === 0) {
-          return "Please add at least one option for single choice question"
-        }
-        const singleCorrect = question.options.filter(o => o.isCorrect).length
-        if (singleCorrect === 0) {
-          return "Please select exactly one correct answer for single choice question"
-        }
-        if (singleCorrect > 1) {
-          return "Single choice question can only have one correct answer"
-        }
-        break
-      
-      case QuestionType.MCQ_MULTIPLE:
-        if (!question.options || question.options.length === 0) {
-          return "Please add at least one option for multiple choice question"
-        }
-        const multipleCorrect = question.options.filter(o => o.isCorrect).length
-        if (multipleCorrect === 0) {
-          return "Please select at least one correct answer for multiple choice question"
-        }
-        break
-      
-      case QuestionType.TRUE_FALSE:
-        if (!question.correctAnswer || (question.correctAnswer !== "true" && question.correctAnswer !== "false")) {
-          return "Please select the correct answer (True or False)"
-        }
-        break
-      
-      case QuestionType.SHORT_ANSWER:
-      case QuestionType.NUMERIC:
-        if (!question.correctAnswer || question.correctAnswer.trim() === "") {
-          return `Please provide the correct answer for ${question.type === QuestionType.NUMERIC ? "numeric" : "short answer"} question`
-        }
-        break
-    }
-    
-    return null
-  }
-
-  const saveNewQuestion = () => {
-    if (!test || !newQuestion) return
-
-    // Clear previous validation error
-    setValidationError("")
-
-    // Validate the question
-    const error = validateQuestion(newQuestion)
-    if (error) {
-      setValidationError(error)
-      return // Don't close dialog, show error
-    }
-
-    if (isEditMode && editingQuestionId) {
-      // Update existing question
-      if (currentSectionId) {
-        setTest({
-          ...test,
-          sections: test.sections.map((s) =>
-            s.id === currentSectionId
-              ? {
-                  ...s,
-                  questions: s.questions.map((q) => (q.id === editingQuestionId ? newQuestion : q)),
-                }
-              : s,
-          ),
-        })
-      } else {
-        setTest({
-          ...test,
-          questions: test.questions.map((q) => (q.id === editingQuestionId ? newQuestion : q)),
-        })
-      }
+    if (sectionId) {
+      setTest({
+        ...test,
+        sections: test.sections.map((s) =>
+          s.id === sectionId ? { ...s, questions: [...(s.questions || []), newQuestion] } : s,
+        ),
+      })
     } else {
-      // Add new question
-      if (currentSectionId) {
-        setTest({
-          ...test,
-          sections: test.sections.map((s) =>
-            s.id === currentSectionId ? { ...s, questions: [...(s.questions || []), newQuestion] } : s,
-          ),
-        })
-      } else {
-        setTest({
-          ...test,
-          questions: [...(test.questions || []), newQuestion],
-        })
-      }
+      setTest({
+        ...test,
+        questions: [...(test.questions || []), newQuestion],
+      })
     }
+    setExpandedQuestions(new Set([...expandedQuestions, newQuestion.id]))
     setSelectedQuestionId(newQuestion.id)
-    setIsAddQuestionDialogOpen(false)
-    setNewQuestion(null)
-    setCurrentSectionId(undefined)
-    setIsEditMode(false)
-    setEditingQuestionId(null)
-    setValidationError("")
-  }
-
-  const updateNewQuestion = (field: keyof Question, value: any) => {
-    if (!newQuestion) return
-    setNewQuestion({ ...newQuestion, [field]: value })
-    // Clear validation error when user makes changes
-    if (validationError) setValidationError("")
-  }
-
-  const addOptionToNewQuestion = () => {
-    if (!newQuestion) return
-
-    const newOption: Option = {
-      id: `option-${Date.now()}`,
-      questionId: newQuestion.id,
-      question: newQuestion,
-      text: "",
-      imageUrl: "",
-      isCorrect: false,
-      order: newQuestion.options?.length || 0,
-      createdAt: new Date(),
-      updatedAt: new Date(),
-    }
-
-    setNewQuestion({
-      ...newQuestion,
-      options: [...(newQuestion.options || []), newOption],
-    })
-  }
-
-  const updateNewQuestionOption = (optionId: string, field: keyof Option, value: any) => {
-    if (!newQuestion) return
-
-    const updatedOptions = newQuestion.options.map((o) => {
-      if (o.id === optionId) {
-        // Handle single correct answer for MCQ_SINGLE and TRUE_FALSE
-        if (
-          field === "isCorrect" &&
-          value &&
-          (newQuestion.type === QuestionType.MCQ_SINGLE || newQuestion.type === QuestionType.TRUE_FALSE)
-        ) {
-          // Set all other options to false
-          newQuestion.options.forEach((opt) => {
-            if (opt.id !== optionId) opt.isCorrect = false
-          })
-        }
-        return { ...o, [field]: value }
-      }
-      // For MCQ_SINGLE and TRUE_FALSE, ensure only one correct answer
-      if (
-        field === "isCorrect" &&
-        value &&
-        (newQuestion.type === QuestionType.MCQ_SINGLE || newQuestion.type === QuestionType.TRUE_FALSE)
-      ) {
-        return { ...o, isCorrect: false }
-      }
-      return o
-    })
-
-    setNewQuestion({ ...newQuestion, options: updatedOptions })
-    // Clear validation error when user makes changes
-    if (validationError) setValidationError("")
-  }
-
-  const deleteNewQuestionOption = (optionId: string) => {
-    if (!newQuestion) return
-    setNewQuestion({
-      ...newQuestion,
-      options: newQuestion.options.filter((o) => o.id !== optionId),
-    })
   }
 
   const updateQuestion = (questionId: string, field: keyof Question, value: any, sectionId?: string) => {
@@ -517,103 +330,6 @@ export default function TestEditor({ id }: { id: string }) {
     )
   }
 
-  const renderNewQuestionOptions = () => {
-    if (!newQuestion) return null
-
-    switch (newQuestion.type) {
-      case QuestionType.MCQ_SINGLE:
-      case QuestionType.MCQ_MULTIPLE:
-        return (
-          <div className="space-y-2">
-            <div className="flex items-center justify-between mb-1">
-              <Label className="text-sm font-medium text-foreground">Options</Label>
-              <Button onClick={addOptionToNewQuestion} size="sm" variant="secondary" className="h-8">
-                <Plus className="w-3.5 h-3.5 mr-1" />
-                Add Option
-              </Button>
-            </div>
-            {newQuestion.options?.map((option, index) => (
-              <div
-                key={option.id}
-                className="flex items-start gap-2 p-2 bg-muted/50 rounded-md border border-border/50"
-              >
-                <div className="flex items-center gap-2 mt-1.5">
-                  <input
-                    type={newQuestion.type === QuestionType.MCQ_SINGLE ? "radio" : "checkbox"}
-                    checked={option.isCorrect}
-                    onChange={(e) => updateNewQuestionOption(option.id, "isCorrect", e.target.checked)}
-                    className="mt-0.5"
-                  />
-                </div>
-                <div className="flex-1 space-y-2">
-                  <QuestionEditor
-                    initialContent={option.text}
-                    onChange={(html) => updateNewQuestionOption(option.id, "text", html)}
-                    placeholder={`Option ${index + 1}`}
-                    type="option"
-                  />
-                </div>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  onClick={() => deleteNewQuestionOption(option.id)}
-                  className="mt-1 text-destructive h-8 w-8"
-                  aria-label="Delete option"
-                >
-                  <Trash2 className="w-4 h-4" />
-                </Button>
-              </div>
-            ))}
-          </div>
-        )
-
-      case QuestionType.TRUE_FALSE:
-        return (
-          <div className="space-y-2">
-            <Label className="text-sm font-medium text-foreground">Answer</Label>
-            <div className="space-y-1.5">
-              <Label className="flex items-center gap-2 text-sm">
-                <input
-                  type="radio"
-                  name={`tf-new`}
-                  checked={newQuestion.correctAnswer === "true"}
-                  onChange={() => updateNewQuestion("correctAnswer", "true")}
-                />
-                True
-              </Label>
-              <Label className="flex items-center gap-2 text-sm">
-                <input
-                  type="radio"
-                  name={`tf-new`}
-                  checked={newQuestion.correctAnswer === "false"}
-                  onChange={() => updateNewQuestion("correctAnswer", "false")}
-                />
-                False
-              </Label>
-            </div>
-          </div>
-        )
-
-      case QuestionType.SHORT_ANSWER:
-      case QuestionType.NUMERIC:
-        return (
-          <div>
-            <Label className="block text-sm font-medium text-foreground mb-2">Correct Answer</Label>
-            <Input
-              type={newQuestion.type === QuestionType.NUMERIC ? "number" : "text"}
-              value={newQuestion.correctAnswer}
-              onChange={(e) => updateNewQuestion("correctAnswer", e.target.value)}
-              placeholder={newQuestion.type === QuestionType.NUMERIC ? "Enter numeric answer" : "Enter correct answer"}
-              className="w-full"
-            />
-          </div>
-        )
-
-      default:
-        return null
-    }
-  }
-
   const renderQuestionOptions = (question: Question, sectionId?: string) => {
     switch (question.type) {
       case QuestionType.MCQ_SINGLE:
@@ -720,125 +436,122 @@ export default function TestEditor({ id }: { id: string }) {
     const isExpanded = expandedQuestions.has(question.id)
 
     return (
-      <Card key={question.id} className="rounded-lg border border-border/50 shadow-sm hover:shadow-md transition bg-card">
-        <CardContent className="p-4">
-          <div className="space-y-3">
-            {/* Question Header with Actions */}
-            <div className="flex items-start justify-between gap-3">
-              <div className="flex items-start gap-2 flex-1 min-w-0">
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  onClick={() => {
-                    if (isExpanded) {
-                      expandedQuestions.delete(question.id)
-                    } else {
-                      expandedQuestions.add(question.id)
-                    }
-                    setExpandedQuestions(new Set(expandedQuestions))
-                  }}
-                  aria-label={isExpanded ? "Collapse question" : "Expand question"}
-                  className="mt-0.5 shrink-0 h-7 w-7"
-                >
-                  {isExpanded ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
-                </Button>
+      <Card key={question.id} className="rounded-lg border border-border/50 shadow-sm hover:shadow transition bg-card">
+        <CardContent className="p-3 md:p-4">
+          <div className="flex items-start justify-between gap-2">
+            <div className="flex items-start gap-2 flex-1 min-w-0">
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => {
+                  if (isExpanded) {
+                    expandedQuestions.delete(question.id)
+                  } else {
+                    expandedQuestions.add(question.id)
+                  }
+                  setExpandedQuestions(new Set(expandedQuestions))
+                }}
+                aria-label="Toggle question details"
+                className="mt-0.5 shrink-0 h-7 w-7"
+              >
+                {isExpanded ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+              </Button>
 
-                <div className="flex-1 min-w-0">
-                  <QuestionRenderer content={question.title || "Untitled Question"} type="question" className="mb-2" />
-                  <div className="flex flex-wrap items-center gap-2">
-                    <Badge variant="outline" className="h-6 px-2 text-xs">
-                      {question.type.replace(/_/g, " ")}
+              <div className="flex-1 min-w-0">
+                <QuestionEditor
+                  initialContent={question.title}
+                  onChange={(html) => updateQuestion(question.id, "title", html, sectionId)}
+                  placeholder="Enter question title"
+                  type="question"
+                />
+                <div className="flex flex-wrap items-center gap-2 mt-1 text-[11px] text-muted-foreground">
+                  <Badge variant="outline" className="h-5 px-1.5">
+                    {question.type.replace(/_/g, " ")}
+                  </Badge>
+                  <span className="leading-none">•</span>
+                  <span className="leading-none">Pts: {question.points}</span>
+                  {question.negativePoints > 0 && (
+                    <Badge variant="secondary" className="h-5 px-1.5 text-destructive">
+                      -{question.negativePoints}
                     </Badge>
-                    <Badge variant="default" className="h-6 px-2 text-xs bg-green-600">
-                      +{question.points} pts
-                    </Badge>
-                    {question.negativePoints > 0 && (
-                      <Badge variant="destructive" className="h-6 px-2 text-xs">
-                        -{question.negativePoints} pts
-                      </Badge>
-                    )}
-                  </div>
+                  )}
                 </div>
               </div>
-              
-              {/* Action Buttons */}
-              <div className="flex items-center gap-2 shrink-0">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => openEditQuestionDialog(question, sectionId)}
-                  className="h-8 px-3 gap-1.5"
-                >
-                  <Pencil className="w-3.5 h-3.5" />
-                  Edit
-                </Button>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  onClick={() => deleteQuestion(question.id, sectionId)}
-                  aria-label="Delete question"
-                  className="h-8 w-8 text-destructive hover:text-destructive-foreground hover:bg-destructive/10"
-                >
-                  <Trash2 className="w-4 h-4" />
-                </Button>
+            </div>
+
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => deleteQuestion(question.id, sectionId)}
+              aria-label="Delete question"
+              className="h-7 w-7 text-destructive hover:text-destructive-foreground"
+            >
+              <Trash2 className="w-4 h-4" />
+            </Button>
+          </div>
+
+          {isExpanded && (
+            <div className="mt-4 pt-3 border-t space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                <div>
+                  <Label className="block text-sm font-medium mb-1">Question Type</Label>
+                  <Select
+                    value={question.type}
+                    onValueChange={(value) => updateQuestion(question.id, "type", value as QuestionType, sectionId)}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select question type" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value={QuestionType.MCQ_SINGLE}>Single Choice</SelectItem>
+                      <SelectItem value={QuestionType.MCQ_MULTIPLE}>Multiple Choice</SelectItem>
+                      <SelectItem value={QuestionType.TRUE_FALSE}>True/False</SelectItem>
+                      <SelectItem value={QuestionType.SHORT_ANSWER}>Short Answer</SelectItem>
+                      <SelectItem value={QuestionType.NUMERIC}>Numeric</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div>
+                  <Label className="block text-sm font-medium mb-1">Points</Label>
+                  <Input
+                    type="number"
+                    value={question.points}
+                    onChange={(e) =>
+                      updateQuestion(question.id, "points", Number.parseFloat(e.target.value) || 0, sectionId)
+                    }
+                    min="0"
+                    step="0.5"
+                  />
+                </div>
+
+                <div>
+                  <Label className="block text-sm font-medium mb-1">Negative Points</Label>
+                  <Input
+                    type="number"
+                    value={question.negativePoints}
+                    onChange={(e) =>
+                      updateQuestion(question.id, "negativePoints", Number.parseFloat(e.target.value) || 0, sectionId)
+                    }
+                    min="0"
+                    step="0.5"
+                  />
+                </div>
+              </div>
+
+              {renderQuestionOptions(question, sectionId)}
+
+              <div>
+                <Label className="block text-xs font-medium mb-2">Explanation (Optional)</Label>
+                <QuestionEditor
+                  initialContent={question.explanation}
+                  onChange={(html) => updateQuestion(question.id, "explanation", html, sectionId)}
+                  placeholder="Explain the correct answer"
+                  type="question"
+                />
               </div>
             </div>
-            
-            {/* Expanded Content - Options and Explanation */}
-            {isExpanded && (
-              <>
-                {/* Options Display */}
-                {question.options && question.options.length > 0 && (
-                  <div className="space-y-2 pl-9 border-l-2 border-muted ml-2">
-                    {question.options.map((option, index) => (
-                      <div key={option.id} className="flex items-start gap-3">
-                        <div className="mt-2 shrink-0">
-                          {question.type === QuestionType.MCQ_SINGLE ? (
-                            <div className={cn(
-                              "w-4 h-4 rounded-full border-2 flex items-center justify-center",
-                              option.isCorrect ? "bg-green-500 border-green-500" : "border-gray-300"
-                            )}>
-                              {option.isCorrect && <div className="w-2 h-2 rounded-full bg-white" />}
-                            </div>
-                          ) : (
-                            <div className={cn(
-                              "w-4 h-4 rounded border-2 flex items-center justify-center",
-                              option.isCorrect ? "bg-green-500 border-green-500" : "border-gray-300"
-                            )}>
-                              {option.isCorrect && (
-                                <svg className="w-3 h-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
-                                </svg>
-                              )}
-                            </div>
-                          )}
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <QuestionRenderer 
-                            content={option.text || `Option ${index + 1}`} 
-                            type="option" 
-                            className="text-sm"
-                          />
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                )}
-
-                {/* Explanation if exists */}
-                {question.explanation && (
-                  <div className="pt-3 border-t ml-2">
-                    <Label className="text-xs font-semibold text-muted-foreground mb-2 block">Explanation</Label>
-                    <QuestionRenderer 
-                      content={question.explanation} 
-                      type="option" 
-                      className="text-sm bg-muted/30"
-                    />
-                  </div>
-                )}
-              </>
-            )}
-          </div>
+          )}
         </CardContent>
       </Card>
     )
@@ -960,7 +673,7 @@ export default function TestEditor({ id }: { id: string }) {
               <div className="mt-4 pt-4 border-t space-y-4">
                 <div className="flex items-center justify-between">
                   <h4 className="text-base font-medium text-foreground">Questions</h4>
-                  <Button size="sm" className="h-9" onClick={() => openAddQuestionDialog(section.id)}>
+                  <Button size="sm" className="h-9" onClick={() => addQuestion(section.id)}>
                     <Plus className="w-4 h-4 mr-2" />
                     Add Question
                   </Button>
@@ -1039,7 +752,7 @@ export default function TestEditor({ id }: { id: string }) {
                         </button>
                         {/* Section actions */}
                         <div className="pl-3 pr-2 pb-2 flex items-center gap-2">
-                          <Button size="sm" variant="secondary" onClick={() => openAddQuestionDialog(s.id)}>
+                          <Button size="sm" variant="secondary" onClick={() => addQuestion(s.id)}>
                             <Plus className="w-3.5 h-3.5 mr-1" />
                             Question
                           </Button>
@@ -1108,7 +821,7 @@ export default function TestEditor({ id }: { id: string }) {
                 Standalone
               </div>
               <div className="px-2 pb-2 flex items-center gap-2">
-                <Button size="sm" onClick={() => openAddQuestionDialog()}>
+                <Button size="sm" onClick={() => addQuestion()}>
                   <Plus className="w-3.5 h-3.5 mr-1" />
                   Question
                 </Button>
@@ -1411,7 +1124,7 @@ export default function TestEditor({ id }: { id: string }) {
                             Create Section
                           </Button>
                         )}
-                        <Button onClick={() => openAddQuestionDialog()}>Add Question</Button>
+                        <Button onClick={() => addQuestion()}>Add Question</Button>
                       </div>
                     </div>
                     <div className="space-y-4">
@@ -1428,7 +1141,7 @@ export default function TestEditor({ id }: { id: string }) {
                                 Create Section
                               </Button>
                             )}
-                            <Button onClick={() => openAddQuestionDialog()}>Add Question</Button>
+                            <Button onClick={() => addQuestion()}>Add Question</Button>
                           </div>
                         </div>
                       )}
@@ -1440,134 +1153,6 @@ export default function TestEditor({ id }: { id: string }) {
           </div>
         </section>
       </div>
-
-      {/* Add Question Dialog */}
-      <Dialog open={isAddQuestionDialogOpen} onOpenChange={setIsAddQuestionDialogOpen}>
-        <DialogContent 
-          className="max-w-3xl max-h-[90vh] overflow-y-auto"
-          onInteractOutside={(e) => {
-            // Prevent closing when clicking on math-field or its popups
-            const target = e.target as HTMLElement
-            if (
-              target.closest('math-field') || 
-              target.closest('.ML__keyboard') || 
-              target.closest('.ML__popover') ||
-              target.closest('.ML__menu') ||
-              target.closest('.ML__tooltip') ||
-              target.classList.contains('ML__keyboard') ||
-              target.classList.contains('ML__popover')
-            ) {
-              e.preventDefault()
-            }
-          }}
-          onEscapeKeyDown={(e) => {
-            // Prevent closing on escape if math field is focused or math modal is open
-            const mathField = document.querySelector('math-field')
-            const mathModal = document.querySelector('.fixed.z-\\[100\\]')
-            if ((mathField && document.activeElement === mathField) || mathModal) {
-              e.preventDefault()
-            }
-          }}
-        >
-          <DialogHeader>
-            <DialogTitle>{isEditMode ? "Edit Question" : "Add New Question"}</DialogTitle>
-            <DialogDescription>
-              {isEditMode 
-                ? "Update the question details below" 
-                : `Create a new question for ${currentSectionId ? "the section" : "standalone questions"}`
-              }
-            </DialogDescription>
-          </DialogHeader>
-
-          {newQuestion && (
-            <div className="space-y-4 py-4">
-              {/* Validation Error Alert */}
-              {validationError && (
-                <div className="flex items-start gap-3 p-3 bg-destructive/10 border border-destructive/30 rounded-md">
-                  <AlertCircle className="w-5 h-5 text-destructive shrink-0 mt-0.5" />
-                  <div className="flex-1">
-                    <p className="text-sm font-medium text-destructive">{validationError}</p>
-                  </div>
-                </div>
-              )}
-
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-                <div>
-                  <Label className="block text-sm font-medium mb-1">Question Type</Label>
-                  <Select
-                    value={newQuestion.type}
-                    onValueChange={(value) => updateNewQuestion("type", value as QuestionType)}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select question type" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value={QuestionType.MCQ_SINGLE}>Single Choice</SelectItem>
-                      <SelectItem value={QuestionType.MCQ_MULTIPLE}>Multiple Choice</SelectItem>
-                      <SelectItem value={QuestionType.TRUE_FALSE}>True/False</SelectItem>
-                      <SelectItem value={QuestionType.SHORT_ANSWER}>Short Answer</SelectItem>
-                      <SelectItem value={QuestionType.NUMERIC}>Numeric</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div>
-                  <Label className="block text-sm font-medium mb-1">Points</Label>
-                  <Input
-                    type="number"
-                    value={newQuestion.points}
-                    onChange={(e) => updateNewQuestion("points", Number.parseFloat(e.target.value) || 0)}
-                    min="0"
-                    step="0.5"
-                  />
-                </div>
-
-                <div>
-                  <Label className="block text-sm font-medium mb-1">Negative Points</Label>
-                  <Input
-                    type="number"
-                    value={newQuestion.negativePoints}
-                    onChange={(e) => updateNewQuestion("negativePoints", Number.parseFloat(e.target.value) || 0)}
-                    min="0"
-                    step="0.5"
-                  />
-                </div>
-              </div>
-
-              <div>
-                <Label className="block text-sm font-medium mb-2">Question Title</Label>
-                <QuestionEditor
-                  initialContent={newQuestion.title}
-                  onChange={(html) => updateNewQuestion("title", html)}
-                  placeholder="Enter question title"
-                  type="question"
-                />
-              </div>
-
-              {renderNewQuestionOptions()}
-
-              <div>
-                <Label className="block text-xs font-medium mb-2">Explanation (Optional)</Label>
-                <QuestionEditor
-                  initialContent={newQuestion.explanation}
-                  onChange={(html) => updateNewQuestion("explanation", html)}
-                  placeholder="Explain the correct answer"
-                  type="question"
-                />
-              </div>
-            </div>
-          )}
-
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setIsAddQuestionDialogOpen(false)}>
-              Cancel
-            </Button>
-            <Button onClick={saveNewQuestion} disabled={!newQuestion?.title}>
-              {isEditMode ? "Save Changes" : "Add Question"}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
     </div>
   )
 }
