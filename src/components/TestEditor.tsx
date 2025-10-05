@@ -24,6 +24,7 @@ import { TestStatus, QuestionOrder, ResultVisibility, QuestionType } from "@/typ
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import { Textarea } from "@/components/ui/textarea"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
@@ -50,7 +51,7 @@ export default function TestEditor({ id }: { id: string }) {
   const [errors, setErrors] = useState<Record<string, string>>({})
   const [expandedSections, setExpandedSections] = useState<Set<string>>(new Set())
   const [expandedQuestions, setExpandedQuestions] = useState<Set<string>>(new Set())
-  const [activeTab, setActiveTab] = useState<"details" | "sections">("details")
+  const [activeTab, setActiveTab] = useState<"details" | "sections" | "publish">("details")
   const [selectedSectionId, setSelectedSectionId] = useState<string | null>(null)
   const [selectedQuestionId, setSelectedQuestionId] = useState<string | null>(null)
   const [isAddQuestionDialogOpen, setIsAddQuestionDialogOpen] = useState(false)
@@ -186,8 +187,36 @@ export default function TestEditor({ id }: { id: string }) {
       }
     }
     
+    const questionId = `question-${Date.now()}`
+    
+    // Create default options for MCQ_SINGLE (2 options by default)
+    const defaultOptions: Option[] = [
+      {
+        id: `option-${Date.now()}-1`,
+        questionId: questionId,
+        question: null as any,
+        text: "",
+        imageUrl: "",
+        isCorrect: false,
+        order: 0,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      },
+      {
+        id: `option-${Date.now()}-2`,
+        questionId: questionId,
+        question: null as any,
+        text: "",
+        imageUrl: "",
+        isCorrect: false,
+        order: 1,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      },
+    ]
+    
     const question: Question = {
-      id: `question-${Date.now()}`,
+      id: questionId,
       testId: test.id,
       test: test,
       type: QuestionType.MCQ_SINGLE,
@@ -197,7 +226,7 @@ export default function TestEditor({ id }: { id: string }) {
       points: defaultPoints,
       negativePoints: defaultNegativePoints,
       order: test.questions?.length || 0,
-      options: [],
+      options: defaultOptions,
       correctAnswer: "",
       explanation: "",
       createdAt: new Date(),
@@ -324,7 +353,75 @@ export default function TestEditor({ id }: { id: string }) {
 
   const updateNewQuestion = (field: keyof Question, value: any) => {
     if (!newQuestion) return
-    setNewQuestion({ ...newQuestion, [field]: value })
+    
+    // Handle question type change - adjust options accordingly
+    if (field === "type") {
+      const newType = value as QuestionType
+      let updatedOptions = newQuestion.options || []
+      let updatedCorrectAnswer = newQuestion.correctAnswer
+      
+      switch (newType) {
+        case QuestionType.MCQ_SINGLE:
+        case QuestionType.MCQ_MULTIPLE:
+          // Ensure at least 2 options for MCQ
+          if (updatedOptions.length < 2) {
+            const optionsToAdd = 2 - updatedOptions.length
+            for (let i = 0; i < optionsToAdd; i++) {
+              updatedOptions.push({
+                id: `option-${Date.now()}-${updatedOptions.length + i}`,
+                questionId: newQuestion.id,
+                question: newQuestion,
+                text: "",
+                imageUrl: "",
+                isCorrect: false,
+                order: updatedOptions.length + i,
+                createdAt: new Date(),
+                updatedAt: new Date(),
+              })
+            }
+          }
+          // For MCQ_SINGLE, ensure only one correct answer
+          if (newType === QuestionType.MCQ_SINGLE) {
+            const correctCount = updatedOptions.filter(o => o.isCorrect).length
+            if (correctCount > 1) {
+              // Keep only the first correct answer
+              let foundFirst = false
+              updatedOptions = updatedOptions.map(o => {
+                if (o.isCorrect && !foundFirst) {
+                  foundFirst = true
+                  return o
+                }
+                return { ...o, isCorrect: false }
+              })
+            }
+          }
+          updatedCorrectAnswer = ""
+          break
+          
+        case QuestionType.TRUE_FALSE:
+          // Clear options and set up for true/false
+          updatedOptions = []
+          updatedCorrectAnswer = ""
+          break
+          
+        case QuestionType.SHORT_ANSWER:
+        case QuestionType.NUMERIC:
+          // Clear options for text-based questions
+          updatedOptions = []
+          updatedCorrectAnswer = ""
+          break
+      }
+      
+      setNewQuestion({ 
+        ...newQuestion, 
+        [field]: value,
+        options: updatedOptions,
+        correctAnswer: updatedCorrectAnswer
+      })
+    } else {
+      setNewQuestion({ ...newQuestion, [field]: value })
+    }
+    
     // Clear validation error when user makes changes
     if (validationError) setValidationError("")
   }
@@ -1223,6 +1320,17 @@ export default function TestEditor({ id }: { id: string }) {
                   >
                     Sections & Questions
                   </button>
+                  <button
+                    onClick={() => setActiveTab("publish")}
+                    className={cn(
+                      "py-2 px-1 border-b-2 font-medium text-sm transition-colors",
+                      activeTab === "publish"
+                        ? "border-primary text-primary"
+                        : "border-transparent text-muted-foreground hover:text-foreground hover:border-border",
+                    )}
+                  >
+                    Publish
+                  </button>
                 </nav>
               </div>
             </div>
@@ -1233,25 +1341,153 @@ export default function TestEditor({ id }: { id: string }) {
             <div className="px-4 py-6">
               {activeTab === "details" ? (
                 <Card>
-                  <CardContent className="p-6 space-y-6">
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <CardContent className="p-6 space-y-8">
+                    {/* Basic Information Section */}
+                    <div className="space-y-4">
                       <div className="space-y-2">
-                        <Label htmlFor="test-title">Test Title</Label>
+                        <Label htmlFor="test-title" className="text-sm font-medium">Test Title</Label>
                         <Input
                           id="test-title"
                           value={test.title}
                           onChange={(e) => updateTestField("title", e.target.value)}
                           placeholder="Enter test title"
+                          className="text-base"
                         />
                       </div>
 
                       <div className="space-y-2">
-                        <Label>Status</Label>
+                        <Label htmlFor="test-description" className="text-sm font-medium">Description</Label>
+                        <Textarea
+                          id="test-description"
+                          value={test.description}
+                          onChange={(e) => updateTestField("description", e.target.value)}
+                          placeholder="Enter test description"
+                          rows={4}
+                          className="resize-none"
+                        />
+                      </div>
+                    </div>
+
+                    <div className="border-t" />
+
+                    {/* Timing & Schedule Section */}
+                    <div className="space-y-4">
+                      <h4 className="text-sm font-semibold text-foreground flex items-center gap-2">
+                        <Clock className="w-4 h-4" />
+                        Timing & Schedule
+                      </h4>
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <div className="space-y-2">
+                          <Label htmlFor="duration" className="text-sm font-medium">Duration (minutes)</Label>
+                          <Input
+                            id="duration"
+                            type="number"
+                            value={test.duration}
+                            onChange={(e) => updateTestField("duration", Number.parseInt(e.target.value) || 0)}
+                            min="0"
+                            placeholder="60"
+                          />
+                        </div>
+
+                        <div className="space-y-2">
+                          <Label htmlFor="start-time" className="text-sm font-medium">Start Time</Label>
+                          <Input
+                            id="start-time"
+                            type="datetime-local"
+                            value={test.startTime ? new Date(test.startTime).toISOString().slice(0, 16) : ""}
+                            onChange={(e) => updateTestField("startTime", new Date(e.target.value))}
+                          />
+                        </div>
+
+                        <div className="space-y-2">
+                          <Label htmlFor="end-time" className="text-sm font-medium">End Time</Label>
+                          <Input
+                            id="end-time"
+                            type="datetime-local"
+                            value={test.endTime ? new Date(test.endTime).toISOString().slice(0, 16) : ""}
+                            onChange={(e) => updateTestField("endTime", new Date(e.target.value))}
+                          />
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="border-t" />
+
+                    {/* Test Configuration Section */}
+                    <div className="space-y-4">
+                      <h4 className="text-sm font-semibold text-foreground">Test Configuration</h4>
+                      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                        <div className="space-y-2">
+                          <Label className="text-sm font-medium">Question Order</Label>
+                          <Select
+                            value={test.questionOrder}
+                            onValueChange={(value) => updateTestField("questionOrder", value as QuestionOrder)}
+                          >
+                            <SelectTrigger>
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value={QuestionOrder.SEQUENTIAL}>Sequential</SelectItem>
+                              <SelectItem value={QuestionOrder.SHUFFLED}>Shuffled</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+
+                        <div className="space-y-2">
+                          <Label className="text-sm font-medium">Result Visibility</Label>
+                          <Select
+                            value={test.resultVisibility}
+                            onValueChange={(value) => updateTestField("resultVisibility", value as ResultVisibility)}
+                          >
+                            <SelectTrigger>
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value={ResultVisibility.INSTANT}>Instant</SelectItem>
+                              <SelectItem value={ResultVisibility.AFTER_TEST}>After Test</SelectItem>
+                              <SelectItem value={ResultVisibility.HIDDEN}>Hidden</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+
+                        <div className="space-y-2">
+                          <Label className="text-sm font-medium">Attempt Limit</Label>
+                          <Input
+                            type="number"
+                            value={test.attemptLimit}
+                            onChange={(e) => updateTestField("attemptLimit", Number.parseInt(e.target.value) || 0)}
+                            min="0"
+                            placeholder="0"
+                          />
+                        </div>
+
+                        <div className="space-y-2">
+                          <Label className="text-sm font-medium">Pass Percentage</Label>
+                          <Input
+                            type="number"
+                            value={test.passPercentage}
+                            onChange={(e) => updateTestField("passPercentage", Number.parseFloat(e.target.value) || 0)}
+                            min="0"
+                            max="100"
+                            placeholder="60"
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              ) : activeTab === "publish" ? (
+                <Card>
+                  <CardContent className="p-6">
+                    <h3 className="text-lg font-semibold mb-4 text-foreground">Publish Settings</h3>
+                    <div className="space-y-6">
+                      <div className="space-y-2">
+                        <Label className="text-sm font-medium">Test Status</Label>
                         <Select
                           value={test.status}
                           onValueChange={(value) => updateTestField("status", value as TestStatus)}
                         >
-                          <SelectTrigger>
+                          <SelectTrigger className="w-full md:w-1/2">
                             <SelectValue />
                           </SelectTrigger>
                           <SelectContent>
@@ -1261,117 +1497,87 @@ export default function TestEditor({ id }: { id: string }) {
                             <SelectItem value={TestStatus.ARCHIVED}>Archived</SelectItem>
                           </SelectContent>
                         </Select>
-                      </div>
-                    </div>
-
-                    <div className="space-y-2">
-                      <Label htmlFor="test-description">Description</Label>
-                      <QuestionEditor
-                        initialContent={test.description}
-                        onChange={(html) => updateTestField("description", html)}
-                        placeholder="Enter test description"
-                        type="question"
-                      />
-                    </div>
-
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                      <div className="space-y-2">
-                        <Label htmlFor="duration">Duration (minutes)</Label>
-                        <Input
-                          id="duration"
-                          type="number"
-                          value={test.duration}
-                          onChange={(e) => updateTestField("duration", Number.parseInt(e.target.value) || 0)}
-                          min="0"
-                        />
+                        <p className="text-xs text-muted-foreground mt-2">
+                          {test.status === TestStatus.DRAFT && "Test is in draft mode and not visible to students"}
+                          {test.status === TestStatus.PUBLISHED && "Test is published and accessible to students"}
+                          {test.status === TestStatus.CLOSED && "Test is closed and no longer accepting submissions"}
+                          {test.status === TestStatus.ARCHIVED && "Test is archived and hidden from view"}
+                        </p>
                       </div>
 
-                      <div className="space-y-2">
-                        <Label htmlFor="start-time">Start Time</Label>
-                        <Input
-                          id="start-time"
-                          type="datetime-local"
-                          value={test.startTime ? new Date(test.startTime).toISOString().slice(0, 16) : ""}
-                          onChange={(e) => updateTestField("startTime", new Date(e.target.value))}
-                        />
-                      </div>
+                      <div className="border-t pt-6">
+                        <h4 className="text-base font-semibold mb-3 text-foreground">Publishing Checklist</h4>
+                        <div className="space-y-3">
+                          <div className="flex items-start gap-3 p-3 rounded-lg bg-muted/30">
+                            <div className={cn(
+                              "w-5 h-5 rounded-full flex items-center justify-center shrink-0 mt-0.5",
+                              test.title ? "bg-green-500" : "bg-muted-foreground/30"
+                            )}>
+                              {test.title && (
+                                <svg className="w-3 h-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
+                                </svg>
+                              )}
+                            </div>
+                            <div>
+                              <p className="text-sm font-medium">Test title is set</p>
+                              <p className="text-xs text-muted-foreground">A clear title helps students identify the test</p>
+                            </div>
+                          </div>
 
-                      <div className="space-y-2">
-                        <Label htmlFor="end-time">End Time</Label>
-                        <Input
-                          id="end-time"
-                          type="datetime-local"
-                          value={test.endTime ? new Date(test.endTime).toISOString().slice(0, 16) : ""}
-                          onChange={(e) => updateTestField("endTime", new Date(e.target.value))}
-                        />
-                      </div>
-                    </div>
+                          <div className="flex items-start gap-3 p-3 rounded-lg bg-muted/30">
+                            <div className={cn(
+                              "w-5 h-5 rounded-full flex items-center justify-center shrink-0 mt-0.5",
+                              (test.sections?.length > 0 || test.questions?.length > 0) ? "bg-green-500" : "bg-muted-foreground/30"
+                            )}>
+                              {(test.sections?.length > 0 || test.questions?.length > 0) && (
+                                <svg className="w-3 h-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
+                                </svg>
+                              )}
+                            </div>
+                            <div>
+                              <p className="text-sm font-medium">Questions added</p>
+                              <p className="text-xs text-muted-foreground">
+                                {test.sections?.reduce((acc, s) => acc + (s.questions?.length || 0), 0) || 0} section questions, {test.questions?.length || 0} standalone questions
+                              </p>
+                            </div>
+                          </div>
 
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                      <div className="space-y-2">
-                        <Label>Question Order</Label>
-                        <div className="flex items-center gap-6">
-                          <label className="flex items-center gap-2 text-sm text-foreground">
-                            <input
-                              type="radio"
-                              name="questionOrder"
-                              checked={test.questionOrder === QuestionOrder.SEQUENTIAL}
-                              onChange={() => updateTestField("questionOrder", QuestionOrder.SEQUENTIAL)}
-                            />
-                            <ListOrdered className="w-4 h-4" />
-                            Sequential
-                          </label>
-                          <label className="flex items-center gap-2 text-sm text-foreground">
-                            <input
-                              type="radio"
-                              name="questionOrder"
-                              checked={test.questionOrder === QuestionOrder.SHUFFLED}
-                              onChange={() => updateTestField("questionOrder", QuestionOrder.SHUFFLED)}
-                            />
-                            <Shuffle className="w-4 h-4" />
-                            Shuffled
-                          </label>
+                          <div className="flex items-start gap-3 p-3 rounded-lg bg-muted/30">
+                            <div className={cn(
+                              "w-5 h-5 rounded-full flex items-center justify-center shrink-0 mt-0.5",
+                              test.duration > 0 ? "bg-green-500" : "bg-muted-foreground/30"
+                            )}>
+                              {test.duration > 0 && (
+                                <svg className="w-3 h-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
+                                </svg>
+                              )}
+                            </div>
+                            <div>
+                              <p className="text-sm font-medium">Duration configured</p>
+                              <p className="text-xs text-muted-foreground">Current duration: {test.duration} minutes</p>
+                            </div>
+                          </div>
+
+                          <div className="flex items-start gap-3 p-3 rounded-lg bg-muted/30">
+                            <div className={cn(
+                              "w-5 h-5 rounded-full flex items-center justify-center shrink-0 mt-0.5",
+                              (test.startTime && test.endTime) ? "bg-green-500" : "bg-muted-foreground/30"
+                            )}>
+                              {(test.startTime && test.endTime) && (
+                                <svg className="w-3 h-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
+                                </svg>
+                              )}
+                            </div>
+                            <div>
+                              <p className="text-sm font-medium">Schedule set</p>
+                              <p className="text-xs text-muted-foreground">Start and end times are configured</p>
+                            </div>
+                          </div>
                         </div>
-                      </div>
-
-                      <div className="space-y-2">
-                        <Label>Result Visibility</Label>
-                        <Select
-                          value={test.resultVisibility}
-                          onValueChange={(value) => updateTestField("resultVisibility", value as ResultVisibility)}
-                        >
-                          <SelectTrigger>
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value={ResultVisibility.INSTANT}>Instant</SelectItem>
-                            <SelectItem value={ResultVisibility.AFTER_TEST}>After Test</SelectItem>
-                            <SelectItem value={ResultVisibility.HIDDEN}>Hidden</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </div>
-                    </div>
-
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                      <div className="space-y-2">
-                        <Label>Attempt Limit</Label>
-                        <Input
-                          type="number"
-                          value={test.attemptLimit}
-                          onChange={(e) => updateTestField("attemptLimit", Number.parseInt(e.target.value) || 0)}
-                          min="0"
-                        />
-                      </div>
-
-                      <div className="space-y-2">
-                        <Label>Pass Percentage</Label>
-                        <Input
-                          type="number"
-                          value={test.passPercentage}
-                          onChange={(e) => updateTestField("passPercentage", Number.parseFloat(e.target.value) || 0)}
-                          min="0"
-                          max="100"
-                        />
                       </div>
                     </div>
                   </CardContent>
