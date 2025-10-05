@@ -61,8 +61,6 @@ export default function TestEditor({ id }: { id: string }) {
   const [editingQuestionId, setEditingQuestionId] = useState<string | null>(null)
   const [validationError, setValidationError] = useState<string>("")
   const [isStructureDialogOpen, setIsStructureDialogOpen] = useState(false)
-  const [testStructure, setTestStructure] = useState<"sections" | "standalone" | null>(null)
-  const [isChangeStructureDialogOpen, setIsChangeStructureDialogOpen] = useState(false)
 
   // Fetch test data
   useEffect(() => {
@@ -77,15 +75,11 @@ export default function TestEditor({ id }: { id: string }) {
       const hasQuestionsInSections = test.sections?.some(s => s.questions && s.questions.length > 0)
       
       // Show dialog only if there are no sections and no questions at all
-      if (!hasSections && !hasQuestions && !hasQuestionsInSections && testStructure === null) {
+      if (!hasSections && !hasQuestions && !hasQuestionsInSections) {
         setIsStructureDialogOpen(true)
-      } else if (hasSections || hasQuestionsInSections) {
-        setTestStructure("sections")
-      } else if (hasQuestions) {
-        setTestStructure("standalone")
       }
     }
-  }, [loading, test, testStructure])
+  }, [loading, test])
 
   const fetchTestData = async () => {
     try {
@@ -550,29 +544,6 @@ export default function TestEditor({ id }: { id: string }) {
         questions: test.questions.filter((q) => q.id !== questionId),
       })
     }
-    setSelectedQuestionId(null)
-  }
-
-  const handleChangeStructure = () => {
-    if (!test || !testStructure) return
-
-    if (testStructure === "sections") {
-      // Changing from sections to standalone - delete all sections
-      setTest({
-        ...test,
-        sections: [],
-      })
-      setTestStructure("standalone")
-    } else {
-      // Changing from standalone to sections - delete all standalone questions
-      setTest({
-        ...test,
-        questions: [],
-      })
-      setTestStructure("sections")
-    }
-    setIsChangeStructureDialogOpen(false)
-    setSelectedSectionId(null)
     setSelectedQuestionId(null)
   }
 
@@ -1628,167 +1599,68 @@ export default function TestEditor({ id }: { id: string }) {
                 </Card>
               ) : (
                 <div className="space-y-6">
-                  {testStructure === "sections" ? (
-                    /* Sections area */
-                    <div>
-                      <div className="flex items-center justify-between mb-3">
-                        <h2 className="text-base font-semibold text-foreground">Sections</h2>
-                        <div className="flex items-center gap-2">
-                          <Button variant="outline" size="sm" onClick={() => setIsChangeStructureDialogOpen(true)}>
-                            <Shuffle className="w-3.5 h-3.5 mr-1.5" />
-                            Change Structure
-                          </Button>
-                          <Button onClick={addSection}>
-                            <Plus className="w-4 h-4 mr-2" />
-                            Add Section
-                          </Button>
+                  {/* Sections area */}
+                  <div>
+                    <div className="flex items-center justify-between mb-3">
+                      <h2 className="text-base font-semibold text-foreground">Sections</h2>
+                      <Button onClick={addSection}>
+                        <Plus className="w-4 h-4 mr-2" />
+                        Add Section
+                      </Button>
+                    </div>
+                    <div className="space-y-4">
+                      {test.sections && test.sections.length > 0 ? (
+                        test.sections.map((section) => renderSection(section))
+                      ) : (
+                        <div className="text-center text-muted-foreground">
+                          No sections available. Click the button above to add a new section.
                         </div>
-                      </div>
-                      <div className="space-y-4">
-                        {test.sections && test.sections.length > 0 ? (
-                          test.sections.map((section) => renderSection(section))
-                        ) : (
-                          <div className="text-center py-12 bg-card rounded-lg border-2 border-dashed border-border">
-                            <div className="flex flex-col items-center gap-4">
-                              <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center">
-                                <ListOrdered className="w-8 h-8 text-primary" />
-                              </div>
-                              <div>
-                                <p className="text-foreground font-medium mb-1">No sections yet</p>
-                                <p className="text-sm text-muted-foreground mb-4">
-                                  Create sections to organize your questions
-                                </p>
-                              </div>
-                              <Button onClick={addSection}>
-                                <Plus className="w-4 h-4 mr-2" />
-                                Add First Section
-                              </Button>
-                            </div>
-                          </div>
-                        )}
-                      </div>
+                      )}
                     </div>
-                  ) : testStructure === "standalone" ? (
-                    /* Standalone questions area */
-                    <div>
-                      <div className="flex items-center justify-between mb-3">
-                        <h2 className="text-base font-semibold text-foreground">Questions</h2>
-                        <div className="flex items-center gap-2">
-                          <Button variant="outline" size="sm" onClick={() => setIsChangeStructureDialogOpen(true)}>
-                            <ListOrdered className="w-3.5 h-3.5 mr-1.5" />
-                            Change Structure
-                          </Button>
-                          <Button onClick={() => openAddQuestionDialog()}>
+                  </div>
+
+                  {/* Standalone questions area */}
+                  <div>
+                    <div className="flex items-center justify-between mb-3">
+                      <h2 className="text-base font-semibold text-foreground">
+                        {test.sections && test.sections.length > 0 ? "Standalone Questions" : "Questions"}
+                      </h2>
+                      <div className="flex items-center gap-2">
+                        {(!test.sections || test.sections.length === 0) && (
+                          <Button variant="secondary" onClick={addSection}>
                             <Plus className="w-4 h-4 mr-2" />
-                            Add Question
+                            Create Section
                           </Button>
-                        </div>
-                      </div>
-                      <div className="space-y-4">
-                        {test.questions && test.questions.length > 0 ? (
-                          test.questions.map((question) => renderQuestion(question))
-                        ) : (
-                          <div className="text-center py-12 bg-card rounded-lg border-2 border-dashed border-border">
-                            <div className="flex flex-col items-center gap-4">
-                              <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center">
-                                <Shuffle className="w-8 h-8 text-primary" />
-                              </div>
-                              <div>
-                                <p className="text-foreground font-medium mb-1">No questions yet</p>
-                                <p className="text-sm text-muted-foreground mb-4">
-                                  Add standalone questions to your test
-                                </p>
-                              </div>
-                              <Button onClick={() => openAddQuestionDialog()}>
-                                <Plus className="w-4 h-4 mr-2" />
-                                Add First Question
-                              </Button>
-                            </div>
-                          </div>
                         )}
+                        <Button onClick={() => openAddQuestionDialog()}>Add Question</Button>
                       </div>
                     </div>
-                  ) : (
-                    <div className="text-center py-12 bg-card rounded-lg border-2 border-dashed border-border">
-                      <p className="text-muted-foreground">Please select a test structure to continue</p>
+                    <div className="space-y-4">
+                      {test.questions && test.questions.length > 0 ? (
+                        test.questions.map((question) => renderQuestion(question))
+                      ) : (
+                        <div className="text-center py-12 bg-card rounded-lg border-2 border-dashed border-border">
+                          <p className="text-muted-foreground mb-4">
+                            {test.sections && test.sections.length > 0 ? "No standalone questions" : "No questions yet"}
+                          </p>
+                          <div className="flex items-center justify-center gap-3">
+                            {(!test.sections || test.sections.length === 0) && (
+                              <Button variant="secondary" onClick={addSection}>
+                                Create Section
+                              </Button>
+                            )}
+                            <Button onClick={() => openAddQuestionDialog()}>Add Question</Button>
+                          </div>
+                        </div>
+                      )}
                     </div>
-                  )}
+                  </div>
                 </div>
               )}
             </div>
           </div>
         </section>
       </div>
-
-      {/* Change Structure Confirmation Dialog */}
-      <Dialog open={isChangeStructureDialogOpen} onOpenChange={setIsChangeStructureDialogOpen}>
-        <DialogContent className="max-w-md">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2 text-destructive">
-              <AlertCircle className="w-5 h-5" />
-              Change Test Structure?
-            </DialogTitle>
-            <DialogDescription className="pt-2">
-              {testStructure === "sections" ? (
-                <div className="space-y-3">
-                  <p>
-                    You are about to change from <strong>Section-wise</strong> to <strong>Standalone Questions</strong>.
-                  </p>
-                  {test && test.sections && test.sections.length > 0 && (
-                    <>
-                      <div className="p-3 bg-destructive/10 border border-destructive/30 rounded-md">
-                        <p className="text-sm font-medium text-destructive">
-                          ⚠️ All {test.sections.length} section{test.sections.length > 1 ? 's' : ''} and their questions will be permanently deleted.
-                        </p>
-                      </div>
-                      <p className="text-sm">
-                        This action cannot be undone. Are you sure you want to continue?
-                      </p>
-                    </>
-                  )}
-                  {(!test || !test.sections || test.sections.length === 0) && (
-                    <p className="text-sm">
-                      Are you sure you want to switch to standalone questions structure?
-                    </p>
-                  )}
-                </div>
-              ) : (
-                <div className="space-y-3">
-                  <p>
-                    You are about to change from <strong>Standalone Questions</strong> to <strong>Section-wise</strong>.
-                  </p>
-                  {test && test.questions && test.questions.length > 0 && (
-                    <>
-                      <div className="p-3 bg-destructive/10 border border-destructive/30 rounded-md">
-                        <p className="text-sm font-medium text-destructive">
-                          ⚠️ All {test.questions.length} standalone question{test.questions.length > 1 ? 's' : ''} will be permanently deleted.
-                        </p>
-                      </div>
-                      <p className="text-sm">
-                        This action cannot be undone. Are you sure you want to continue?
-                      </p>
-                    </>
-                  )}
-                  {(!test || !test.questions || test.questions.length === 0) && (
-                    <p className="text-sm">
-                      Are you sure you want to switch to section-wise structure?
-                    </p>
-                  )}
-                </div>
-              )}
-            </DialogDescription>
-          </DialogHeader>
-
-          <DialogFooter className="gap-2">
-            <Button variant="outline" onClick={() => setIsChangeStructureDialogOpen(false)}>
-              Cancel
-            </Button>
-            <Button variant="destructive" onClick={handleChangeStructure}>
-              Yes, Change Structure
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
 
       {/* Test Structure Selection Dialog */}
       <Dialog open={isStructureDialogOpen} onOpenChange={setIsStructureDialogOpen}>
@@ -1804,9 +1676,8 @@ export default function TestEditor({ id }: { id: string }) {
             {/* Section-wise option */}
             <button
               onClick={() => {
-                setTestStructure("sections")
+                addSection()
                 setIsStructureDialogOpen(false)
-                setActiveTab("sections")
               }}
               className="group relative p-6 border-2 border-border rounded-lg hover:border-primary hover:bg-accent/50 transition-all text-left focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2"
             >
@@ -1831,9 +1702,8 @@ export default function TestEditor({ id }: { id: string }) {
             {/* Standalone questions option */}
             <button
               onClick={() => {
-                setTestStructure("standalone")
+                openAddQuestionDialog()
                 setIsStructureDialogOpen(false)
-                setActiveTab("sections")
               }}
               className="group relative p-6 border-2 border-border rounded-lg hover:border-primary hover:bg-accent/50 transition-all text-left focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2"
             >
