@@ -63,6 +63,7 @@ export default function TestEditor({ id }: { id: string }) {
   const [isStructureDialogOpen, setIsStructureDialogOpen] = useState(false)
   const [testStructure, setTestStructure] = useState<"sections" | "standalone" | null>(null)
   const [isChangeStructureDialogOpen, setIsChangeStructureDialogOpen] = useState(false)
+  const [notifications, setNotifications] = useState<Array<{ id: string; message: string; type: "success" | "error" }>>([])
 
   // Fetch test data
   useEffect(() => {
@@ -119,19 +120,89 @@ export default function TestEditor({ id }: { id: string }) {
       setSaving(true)
       setErrors({})
 
-      const response = await fetch(`/api/test/${testId}`, {
+      if (!test) return
+
+      // Transform the test data to match API expectations
+      const testData = {
+        title: test.title,
+        description: test.description,
+        duration: test.duration,
+        startTime: test.startTime,
+        endTime: test.endTime,
+        status: test.status,
+        questionOrder: test.questionOrder,
+        attemptLimit: test.attemptLimit,
+        resultVisibility: test.resultVisibility,
+        passPercentage: test.passPercentage,
+        // Include sections and questions based on test structure
+        sections: test.sections && test.sections.length > 0 ? test.sections.map(section => ({
+          id: section.id,
+          title: section.title,
+          description: section.description,
+          duration: section.duration,
+          order: section.order,
+          questions: section.questions ? section.questions.map(question => ({
+            id: question.id,
+            type: question.type,
+            title: question.title,
+            description: question.description,
+            imageUrl: question.imageUrl,
+            points: question.points,
+            negativePoints: question.negativePoints,
+            order: question.order,
+            correctAnswer: question.correctAnswer,
+            explanation: question.explanation,
+            options: question.options ? question.options.map(option => ({
+              id: option.id,
+              text: option.text,
+              imageUrl: option.imageUrl,
+              isCorrect: option.isCorrect,
+              order: option.order,
+            })) : [],
+          })) : [],
+        })) : [],
+        questions: (!test.sections || test.sections.length === 0) && test.questions ? test.questions.map(question => ({
+          id: question.id,
+          type: question.type,
+          title: question.title,
+          description: question.description,
+          imageUrl: question.imageUrl,
+          points: question.points,
+          negativePoints: question.negativePoints,
+          order: question.order,
+          correctAnswer: question.correctAnswer,
+          explanation: question.explanation,
+          options: question.options ? question.options.map(option => ({
+            id: option.id,
+            text: option.text,
+            imageUrl: option.imageUrl,
+            isCorrect: option.isCorrect,
+            order: option.order,
+          })) : [],
+        })) : [],
+      }
+
+      const response = await fetch(`/api/tests/${testId}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(test),
+        body: JSON.stringify(testData),
       })
 
-      if (!response.ok) throw new Error("Failed to save test")
+      if (!response.ok) {
+        const errorData = await response.json()
+        throw new Error(errorData.error || "Failed to save test")
+      }
+
+      const result = await response.json()
+
+      // Update local test state with the response data
+      setTest(result.test)
 
       // Show success message
       showNotification("Test saved successfully!", "success")
     } catch (error) {
       console.error("Error saving test:", error)
-      setErrors({ save: "Failed to save test" })
+      setErrors({ save: error instanceof Error ? error.message : "Failed to save test" })
       showNotification("Failed to save test", "error")
     } finally {
       setSaving(false)
@@ -139,8 +210,12 @@ export default function TestEditor({ id }: { id: string }) {
   }
 
   const showNotification = (message: string, type: "success" | "error") => {
-    // Implement your notification system here
-    console.log(`${type}: ${message}`)
+    const id = Date.now().toString()
+    setNotifications(prev => [...prev, { id, message, type }])
+    // Auto remove after 3 seconds
+    setTimeout(() => {
+      setNotifications(prev => prev.filter(n => n.id !== id))
+    }, 3000)
   }
 
   const updateTestField = (field: keyof Test, value: any) => {
@@ -1991,6 +2066,29 @@ export default function TestEditor({ id }: { id: string }) {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Notification Toasts */}
+      <div className="fixed top-4 right-4 z-50 space-y-2">
+        {notifications.map((notification) => (
+          <div
+            key={notification.id}
+            className={cn(
+              "max-w-sm w-full p-4 rounded-lg shadow-lg transition-all transform translate-x-full animate-in slide-in-from-right-2",
+              notification.type === "success"
+                ? "bg-green-50 border border-green-200 text-green-800"
+                : "bg-red-50 border border-red-200 text-red-800"
+            )}
+          >
+            <div className="flex items-center gap-2">
+              <div className={cn(
+                "w-2 h-2 rounded-full",
+                notification.type === "success" ? "bg-green-500" : "bg-red-500"
+              )} />
+              <p className="text-sm font-medium">{notification.message}</p>
+            </div>
+          </div>
+        ))}
+      </div>
     </div>
   )
 }
